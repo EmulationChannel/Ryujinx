@@ -15,6 +15,7 @@ using Ryujinx.Common.Logging;
 using Ryujinx.HLE.HOS.Services.Fs.FileSystemProxy;
 using Ryujinx.Memory;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using static Ryujinx.HLE.Utilities.StringUtils;
 using GameCardHandle = System.UInt32;
@@ -787,14 +788,23 @@ namespace Ryujinx.HLE.HOS.Services.Fs
         // OpenDataStorageByCurrentProcess() -> object<nn::fssrv::sf::IStorage> dataStorage
         public ResultCode OpenDataStorageByCurrentProcess(ServiceCtx context)
         {
-            LibHac.Fs.IStorage storage = context.Device.FileSystem.GetRomFs(_pid).AsStorage(true);
-            using SharedRef<LibHac.Fs.IStorage> sharedStorage = new(storage);
-            using SharedRef<IStorage> sfStorage = new(new StorageInterfaceAdapter(ref sharedStorage.Ref));
+            try
+            {
+                LibHac.Fs.IStorage storage = context.Device.FileSystem.GetRomFs(_pid).AsStorage(true);
+                using SharedRef<LibHac.Fs.IStorage> sharedStorage = new(storage);
+                using SharedRef<IStorage> sfStorage = new(new StorageInterfaceAdapter(ref sharedStorage.Ref));
 
-            MakeObject(context, new FileSystemProxy.IStorage(ref sfStorage.Ref));
+                MakeObject(context, new FileSystemProxy.IStorage(ref sfStorage.Ref));
 
-            return ResultCode.Success;
+                return ResultCode.Success;
+            }
+            catch (KeyNotFoundException)
+            {
+                Logger.Error?.Print(LogClass.ServiceFs, $"No RomFS found for PID={_pid}");
+                return ResultCode.PathDoesNotExist;
+            }
         }
+
 
         [CommandCmif(202)]
         // OpenDataStorageByDataId(u8 storageId, nn::ncm::DataId dataId) -> object<nn::fssrv::sf::IStorage> dataStorage

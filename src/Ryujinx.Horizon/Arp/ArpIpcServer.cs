@@ -3,6 +3,7 @@ using Ryujinx.Horizon.Sdk.Arp;
 using Ryujinx.Horizon.Sdk.Arp.Detail;
 using Ryujinx.Horizon.Sdk.Sf.Hipc;
 using Ryujinx.Horizon.Sdk.Sm;
+using System;
 
 namespace Ryujinx.Horizon.Arp
 {
@@ -52,11 +53,24 @@ namespace Ryujinx.Horizon.Arp
             _serverManager.ServiceRequests();
         }
 
+        public Action[] disposables;
+
         public void Shutdown()
         {
-            _applicationInstanceManager.Dispose();
-            _serverManager.Dispose();
-            _sm.Dispose();
+            disposables = new Action[]
+            {
+                () => _applicationInstanceManager.Dispose(),
+                () => _serverManager.Dispose(),
+                () => _sm.Dispose()
+            };
+            foreach (var disposeAction in disposables)
+            {
+                try
+                {
+                    disposeAction();
+                }
+                catch (Exception e) { }
+            }
         }
     }
 }

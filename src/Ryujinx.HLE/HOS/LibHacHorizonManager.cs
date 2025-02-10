@@ -115,5 +115,23 @@ namespace Ryujinx.HLE.HOS
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x01, 0x09, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
         ];
+        
+        public LibHacHorizonManager Clone()
+        {
+            LibHacHorizonManager manager = new();
+            manager.Server = Server;
+            manager.RyujinxClient = RyujinxClient;
+            manager.ApplicationClient = ApplicationClient;
+            manager.AccountClient = AccountClient;
+            manager.AmClient = AmClient;
+            manager.BcatClient = BcatClient;
+            manager.FsClient = FsClient;
+            manager.NsClient = NsClient;
+            manager.PmClient = PmClient;
+            manager.SdbClient = SdbClient;
+            manager._arpIReader = _arpIReader;
+            manager._arpIReader.Reset(new LibHacIReader());
+            return manager;
+        }
     }
 }

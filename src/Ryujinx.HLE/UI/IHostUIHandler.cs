@@ -1,6 +1,11 @@
+using LibHac.Common;
+using LibHac.Ns;
 using Ryujinx.HLE.HOS.Applets;
 using Ryujinx.HLE.HOS.Services.Account.Acc;
 using Ryujinx.HLE.HOS.Services.Am.AppletOE.ApplicationProxyService.ApplicationProxy.Types;
+using Ryujinx.HLE.HOS.Services.Ns;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Ryujinx.HLE.UI
 {
@@ -66,5 +71,15 @@ namespace Ryujinx.HLE.UI
         /// Displays the player select dialog and returns the selected profile.
         /// </summary>
         UserProfile ShowPlayerSelectDialog();
+
+        /// <summary>
+        /// Takes a screenshot from the current renderer and saves it in the screenshots folder.
+        /// </summary>
+        void TakeScreenshot();
+
+        /// <summary>
+        /// Is dark mode enabled?
+        /// </summary>
+        bool IsDarkMode();
     }
 }

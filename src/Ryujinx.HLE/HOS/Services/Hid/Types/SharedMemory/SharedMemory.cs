@@ -1,4 +1,5 @@
 using Ryujinx.Common.Memory;
+using Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory.Button;
 using Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory.Common;
 using Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory.DebugMouse;
 using Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory.DebugPad;
@@ -39,6 +40,24 @@ namespace Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory
         /// </summary>
         [FieldOffset(0x3800)]
         public RingLifo<KeyboardState> Keyboard;
+        
+        /// <summary>
+        /// Home Button.
+        /// </summary>
+        [FieldOffset(0x4C00)]
+        public RingLifo<ButtonState> HomeButton;
+        
+        /// <summary>
+        /// Sleep Button.
+        /// </summary>
+        [FieldOffset(0x4E00)]
+        public RingLifo<ButtonState> SleepButton;
+        
+        /// <summary>
+        /// Capture Button.
+        /// </summary>
+        [FieldOffset(0x5000)]
+        public RingLifo<ButtonState> CaptureButton;
 
         /// <summary>
         /// Nintendo Pads.
@@ -60,6 +79,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid.Types.SharedMemory
                 TouchScreen = RingLifo<TouchScreenState>.Create(),
                 Mouse = RingLifo<MouseState>.Create(),
                 Keyboard = RingLifo<KeyboardState>.Create(),
+                HomeButton = RingLifo<ButtonState>.Create(),
+                CaptureButton = RingLifo<ButtonState>.Create(),
             };
 
             for (int i = 0; i < result.Npads.Length; i++)

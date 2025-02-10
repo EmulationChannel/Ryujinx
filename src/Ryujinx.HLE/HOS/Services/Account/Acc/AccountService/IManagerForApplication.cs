@@ -1,3 +1,5 @@
+using Ryujinx.Common.Logging;
+
 namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
 {
     class IManagerForApplication : IpcService
@@ -70,6 +72,15 @@ namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
             }
 
             return resultCode;
+        }
+        
+        [CommandCmif(250)]
+        // IsLinkedWithNintendoAccount() -> bool
+        public ResultCode IsLinkedWithNintendoAccount(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceAcc);
+            context.ResponseData.Write(false);
+            return ResultCode.Success;
         }
     }
 }

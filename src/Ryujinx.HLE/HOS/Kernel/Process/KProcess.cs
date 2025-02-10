@@ -86,7 +86,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
 
         private IProcessContextFactory _contextFactory;
         public IProcessContext Context { get; private set; }
-        public IVirtualMemoryManager CpuMemory => Context.AddressSpace;
+        public IVirtualMemoryManagerTracked CpuMemory => Context.AddressSpace;
 
         public HleProcessDebugger Debugger { get; private set; }
 
@@ -911,7 +911,8 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
                 SignalExitToDebugTerminated();
                 SignalExit();
             }
-
+            
+            KernelContext.Device.Processes._processesByPid.TryRemove(Pid, out _);
             return result;
         }
 
@@ -951,7 +952,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
 
             KernelStatic.GetCurrentThread().Exit();
         }
-
+        
         private void UnpauseAndTerminateAllThreadsExcept(KThread currentThread)
         {
             lock (_threadingLock)

@@ -104,7 +104,7 @@ namespace Ryujinx.Audio
         /// <summary>
         /// The maximum number of audio renderer sessions allowed to be created system wide.
         /// </summary>
-        public const int AudioRendererSessionCountMax = 2;
+        public const int AudioRendererSessionCountMax = 8;
 
         /// <summary>
         /// The maximum number of audio output sessions allowed to be created system wide.
@@ -114,7 +114,7 @@ namespace Ryujinx.Audio
         /// <summary>
         /// The maximum number of audio input sessions allowed to be created system wide.
         /// </summary>
-        public const int AudioInSessionCountMax = 4;
+        public const int AudioInSessionCountMax = 8;
 
         /// <summary>
         /// Maximum buffers supported by one audio device session.

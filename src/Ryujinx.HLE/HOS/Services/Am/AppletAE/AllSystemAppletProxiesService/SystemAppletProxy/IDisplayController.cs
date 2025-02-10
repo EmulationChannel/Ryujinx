@@ -16,7 +16,55 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         {
             _transferMem = context.Device.System.AppletCaptureBufferTransfer;
         }
+        
+        
+        [CommandCmif(4)]
+        public ResultCode UpdateCallerAppletCaptureImage(ServiceCtx context)
+        {
+            if (context.Device.System.IsApplet())
+            {
+                int count = context.Device.Processes.ActiveApplication.RealAppletInstance.Layers.Count;
+                context.Device.System.SurfaceFlinger.SetRenderLayer(context.Device.Processes.ActiveApplication.RealAppletInstance.Layers[count - 1]);
+            }
 
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(5)]
+        [CommandCmif(6)]
+        [CommandCmif(7)]
+        // GetCallerAppletCaptureImageEx() -> (b8, buffer<bytes, 6>)
+        public ResultCode GetLastForegroundCaptureImageEx(ServiceCtx context)
+        {
+            ulong bufferPosition = context.Request.ReceiveBuff[0].Position;
+            ulong bufferSize = context.Request.ReceiveBuff[0].Size;
+
+            if (bufferSize != 0x384000)
+            {
+                return ResultCode.BufferNotAcquired;
+            }
+
+            Logger.Stub?.PrintStub(LogClass.ServiceAm, new { bufferSize });
+
+            var frame = context.Device.Gpu.Window.GetLastPresentedDataLinear().Data;
+            if (frame == null || frame.Length == 0)
+            {
+                return ResultCode.BufferNotAcquired;
+            }
+
+            if ((ulong)frame.Length != bufferSize)
+            {
+                Logger.Warning?.Print(LogClass.ServiceAm, $"Frame size mismatch. Expected: {bufferSize}, got: {frame.Length}");
+                return ResultCode.BufferNotAcquired;
+            }
+
+            context.ResponseData.Write(true);
+            context.Memory.Write(bufferPosition, frame);
+            Logger.Debug?.Print(LogClass.ServiceAm, "Wrote last presented data to buffer.");
+
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(8)] // 2.0.0+
         // TakeScreenShotOfOwnLayer(b8, s32)
         public ResultCode TakeScreenShotOfOwnLayer(ServiceCtx context)
@@ -99,6 +147,27 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
             _callerAppletCaptureBufferAcquired = true;
 
             context.ResponseData.Write(_callerAppletCaptureBufferAcquired);
+
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(22)]
+        // AcquireLastApplicationCaptureSharedBuffer() -> (b8, u32)
+        public ResultCode AcquireLastApplicationCaptureSharedBuffer(ServiceCtx context)
+        {
+            context.ResponseData.Write(1);
+            context.ResponseData.Write(context.Device.System.ViServerS.GetApplicationLastPresentedFrameHandle(context.Device.Gpu));
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(26)]
+        // AcquireCallerAppletCaptureSharedBuffer() -> (b8, u32)
+        public ResultCode AcquireCallerAppletCaptureSharedBuffer(ServiceCtx context)
+        {
+            // TODO: How does the handling for applets differ from the one for applications?
+            context.ResponseData.Write(1);
+            context.ResponseData.Write(context.Device.System.ViServerS.GetApplicationLastPresentedFrameHandle(context.Device.Gpu));
 
             return ResultCode.Success;
         }

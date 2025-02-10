@@ -340,36 +340,6 @@ namespace Ryujinx.HLE.HOS.Services.Mii.StaticService
             return result;
         }
 
-        private Span<byte> CreateByteSpanFromBuffer(ServiceCtx context, IpcBuffDesc ipcBuff, bool isOutput)
-        {
-            byte[] rawData;
-
-            if (isOutput)
-            {
-                rawData = new byte[ipcBuff.Size];
-            }
-            else
-            {
-                rawData = new byte[ipcBuff.Size];
-
-                context.Memory.Read(ipcBuff.Position, rawData);
-            }
-
-            return new Span<byte>(rawData);
-        }
-
-        private Span<T> CreateSpanFromBuffer<T>(ServiceCtx context, IpcBuffDesc ipcBuff, bool isOutput) where T : unmanaged
-        {
-            return MemoryMarshal.Cast<byte, T>(CreateByteSpanFromBuffer(context, ipcBuff, isOutput));
-        }
-
-        private void WriteSpanToBuffer<T>(ServiceCtx context, IpcBuffDesc ipcBuff, Span<T> span) where T : unmanaged
-        {
-            Span<byte> rawData = MemoryMarshal.Cast<T, byte>(span);
-
-            context.Memory.Write(ipcBuff.Position, rawData);
-        }
-
         protected abstract bool IsUpdated(SourceFlag flag);
 
         protected abstract bool IsFullDatabase();

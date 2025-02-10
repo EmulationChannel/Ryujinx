@@ -125,5 +125,20 @@ namespace Ryujinx.HLE.HOS.Services.Account.Acc
 
             return ResultCode.Success;
         }
+        
+        [CommandCmif(250)]
+        // GetBaasAccountAdministrator -> object<nn::account::baas::IAdministrator>
+        public ResultCode GetBaasAccountAdministrator(ServiceCtx context)
+        {
+            ResultCode resultCode = _applicationServiceServer.CheckUserId(context, out UserId userId);
+
+            if (resultCode != ResultCode.Success)
+            {
+                return resultCode;
+            }
+
+            MakeObject(context, new IManagerForApplication(userId));
+            return ResultCode.Success;
+        }
     }
 }

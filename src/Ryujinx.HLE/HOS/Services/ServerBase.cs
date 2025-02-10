@@ -7,6 +7,7 @@ using Ryujinx.HLE.HOS.Kernel;
 using Ryujinx.HLE.HOS.Kernel.Ipc;
 using Ryujinx.HLE.HOS.Kernel.Process;
 using Ryujinx.HLE.HOS.Kernel.Threading;
+using Ryujinx.HLE.Loaders.Processes;
 using Ryujinx.Horizon;
 using Ryujinx.Horizon.Common;
 using System;
@@ -172,6 +173,15 @@ namespace Ryujinx.HLE.HOS.Services
         {
             ServerLoop();
         }
+        
+        protected virtual ulong CalculateRequiredHeapSize()
+        {
+            return 0UL;
+        }
+
+        protected virtual void CustomInit(KernelContext context, ulong pid, ulong heapAddress)
+        {
+        }
 
         private void ServerLoop()
         {
@@ -196,10 +206,14 @@ namespace Ryujinx.HLE.HOS.Services
             Result result = _selfProcess.HandleTable.GenerateHandle(_wakeEvent.ReadableEvent, out _wakeHandle);
 
             InitDone.Set();
+            
+            ulong heapSize = CalculateRequiredHeapSize() + PointerBufferSize;
 
             ulong messagePtr = _selfThread.TlsAddress;
-            _context.Syscall.SetHeapSize(out ulong heapAddr, 0x200000);
-
+            _context.Syscall.SetHeapSize(out ulong heapAddr, BitUtils.AlignUp(heapSize, 0x200000UL));
+            
+            CustomInit(_context, _selfProcess.Pid, heapAddr + PointerBufferSize);
+            
             _selfProcess.CpuMemory.Write(messagePtr + 0x0, 0);
             _selfProcess.CpuMemory.Write(messagePtr + 0x4, 2 << 10);
             _selfProcess.CpuMemory.Write(messagePtr + 0x8, heapAddr | ((ulong)PointerBufferSize << 48));
@@ -551,6 +565,18 @@ namespace Ryujinx.HLE.HOS.Services
         public void Dispose()
         {
             Dispose(true);
+        }
+
+        public void Stop()
+        {
+            try
+            {
+                _selfProcess.Terminate();
+                _selfThread.Terminate();
+            }
+            catch (Exception e) { }
+
+            Dispose();
         }
     }
 }

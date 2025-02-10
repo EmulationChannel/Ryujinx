@@ -96,7 +96,8 @@ namespace Ryujinx.HLE.HOS.Services.Sm
                     ServiceAttribute serviceAttribute = type.GetCustomAttributes<ServiceAttribute>().First(service => service.Name == name);
 
                     IpcService service = GetServiceInstance(type, context, serviceAttribute.Parameter);
-
+                    
+                    Logger.Info?.Print(LogClass.ServiceSm, $"Service {name} created.");
                     service.TrySetServer(_commonServer);
                     service.Server.AddSessionObj(session.ServerSession, service);
                 }

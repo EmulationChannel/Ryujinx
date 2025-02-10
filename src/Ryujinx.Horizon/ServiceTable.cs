@@ -89,5 +89,26 @@ namespace Ryujinx.Horizon
         {
             Dispose(true);
         }
+
+        private ArpIpcServer arpIpcServer = null;
+        public ServiceTable Clone()
+        {
+            ServiceTable clone = new();
+            clone._readyServices = 0;
+            clone._totalServices = _totalServices;
+            clone._servicesReadyEvent.Reset();
+            clone.arpIpcServer = new();
+
+            clone.arpIpcServer.Initialize();
+
+            clone.ArpReader = clone.arpIpcServer.Reader;
+            clone.ArpWriter = clone.arpIpcServer.Writer;
+            return clone;
+        }
+
+        public void ShutdownApplet()
+        {
+            arpIpcServer?.Shutdown();
+        }
     }
 }

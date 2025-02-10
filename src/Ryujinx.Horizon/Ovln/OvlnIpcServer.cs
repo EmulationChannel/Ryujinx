@@ -1,4 +1,3 @@
-using Ryujinx.Horizon.Ovln.Ipc;
 using Ryujinx.Horizon.Sdk.Sf.Hipc;
 using Ryujinx.Horizon.Sdk.Sm;
 
@@ -28,11 +27,6 @@ namespace Ryujinx.Horizon.Ovln
             _sm.Initialize().AbortOnFailure();
 
             _serverManager = new ServerManager(allocator, _sm, MaxPortsCount, _options, TotalMaxSessionsCount);
-
-#pragma warning disable IDE0055 // Disable formatting
-            _serverManager.RegisterObjectForServer(new ReceiverService(), ServiceName.Encode("ovln:rcv"), OvlnRcvMaxSessionsCount); // 8.0.0+
-            _serverManager.RegisterObjectForServer(new SenderService(),   ServiceName.Encode("ovln:snd"), OvlnSndMaxSessionsCount); // 8.0.0+
-#pragma warning restore IDE0055
         }
 
         public void ServiceRequests()

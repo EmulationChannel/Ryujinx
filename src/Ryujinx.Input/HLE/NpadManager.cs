@@ -1,6 +1,7 @@
 using Ryujinx.Common.Configuration.Hid;
 using Ryujinx.Common.Configuration.Hid.Controller;
 using Ryujinx.Common.Configuration.Hid.Keyboard;
+using Ryujinx.Common.Logging;
 using Ryujinx.HLE.HOS.Services.Hid;
 using System;
 using System.Collections.Generic;
@@ -209,6 +210,8 @@ namespace Ryujinx.Input.HLE
                 List<SixAxisInput> hleMotionStates = new(NpadDevices.MaxControllers);
 
                 KeyboardInput? hleKeyboardInput = null;
+                bool isCaptureDown = false;
+                bool isHomeDown = false;
 
                 foreach (InputConfig inputConfig in _inputConfig)
                 {
@@ -230,6 +233,14 @@ namespace Ryujinx.Input.HLE
                         controller.UpdateRumble(_device.Hid.Npads.GetRumbleQueue(playerIndex));
 
                         inputState = controller.GetHLEInputState();
+                        if (!isCaptureDown)
+                        {
+                            isCaptureDown = controller.IsControllerKeyPressed(ControllerKeys.Capture);
+                        }
+                        if (!isHomeDown)
+                        {
+                            isHomeDown = controller.IsControllerKeyPressed(ControllerKeys.Home);
+                        }
 
                         inputState.Buttons |= _device.Hid.UpdateStickButtons(inputState.LStick, inputState.RStick);
 
@@ -266,6 +277,8 @@ namespace Ryujinx.Input.HLE
 
                 _device.Hid.Npads.Update(hleInputStates);
                 _device.Hid.Npads.UpdateSixAxis(hleMotionStates);
+                _device.Hid.CaptureButton.Update(isCaptureDown);
+                _device.Hid.HomeButton.Update(isHomeDown);
 
                 if (hleKeyboardInput.HasValue)
                 {

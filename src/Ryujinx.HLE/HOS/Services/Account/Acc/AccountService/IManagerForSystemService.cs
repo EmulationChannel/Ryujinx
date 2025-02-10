@@ -1,3 +1,5 @@
+using Ryujinx.Common.Logging;
+
 namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
 {
     class IManagerForSystemService : IpcService
@@ -42,6 +44,14 @@ namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
         public ResultCode LoadIdTokenCache(ServiceCtx context)
         {
             return _managerServer.LoadIdTokenCache(context);
+        }
+        
+        [CommandCmif(130)]
+        // GetNintendoAccountUserResourceCache() -> (nn::account::NintendoAccountId, buffer<nn::account::nas::NasUserBase, 0x1a>, buffer<bytes, 6>)
+        public ResultCode GetNintendoAccountUserResourceCache(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            return ResultCode.Success;
         }
     }
 }

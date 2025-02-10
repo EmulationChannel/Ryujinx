@@ -40,6 +40,7 @@ using Ryujinx.HLE;
 using Ryujinx.HLE.FileSystem;
 using Ryujinx.HLE.HOS;
 using Ryujinx.HLE.HOS.Services.Account.Acc;
+using Ryujinx.HLE.HOS.Services.Ns.Types;
 using Ryujinx.HLE.HOS.SystemState;
 using Ryujinx.Input;
 using Ryujinx.Input.HLE;
@@ -47,6 +48,7 @@ using SkiaSharp;
 using SPB.Graphics.Vulkan;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -54,6 +56,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using static Ryujinx.Ava.UI.Helpers.Win32NativeInterop;
 using AntiAliasing = Ryujinx.Common.Configuration.AntiAliasing;
+using ApplicationId = LibHac.ApplicationId;
 using InputManager = Ryujinx.Input.HLE.InputManager;
 using IRenderer = Ryujinx.Graphics.GAL.IRenderer;
 using Key = Ryujinx.Input.Key;
@@ -126,12 +129,14 @@ namespace Ryujinx.Ava
         private readonly bool _isFirmwareTitle;
 
         private readonly Lock _lockObject = new();
+        private List<RyuApplicationData> _titles = new();
 
         public event EventHandler AppExit;
         public event EventHandler<StatusUpdatedEventArgs> StatusUpdatedEvent;
 
         public VirtualFileSystem VirtualFileSystem { get; }
         public ContentManager ContentManager { get; }
+        public IImmutableList<RyuApplicationData> Titles { get => _titles.ToImmutableList(); }
         public NpadManager NpadManager { get; }
         public TouchScreenManager TouchScreenManager { get; }
         public HLE.Switch Device { get; set; }
@@ -917,6 +922,12 @@ namespace Ryujinx.Ava
 
             Logger.Info?.PrintMsg(LogClass.Gpu, $"Backend Threading ({threadingMode}): {isGALThreaded}");
 
+            _titles = new List<RyuApplicationData>();
+            foreach (ApplicationData App in _viewModel.Applications)
+            {
+                _titles.Add(new(new ApplicationId(App.Id),App.ControlHolder.Value,App.Path,App.Icon));
+            }
+            
             // Initialize Configuration.
             MemoryConfiguration memoryConfiguration = ConfigurationState.Instance.System.DramSize.Value;
 
@@ -925,6 +936,7 @@ namespace Ryujinx.Ava
                 _viewModel.LibHacHorizonManager,
                 ContentManager,
                 _accountManager,
+                Titles.ToImmutableList(),
                 _userChannelPersistence,
                 renderer,
                 InitializeAudio(),

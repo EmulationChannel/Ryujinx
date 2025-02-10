@@ -32,6 +32,7 @@ namespace Ryujinx.HLE.HOS.Services.Hid
         internal NpadJoyHoldType JoyHold { get; set; }
         internal bool SixAxisActive = false; // TODO: link to hidserver when implemented
         internal ControllerType SupportedStyleSets { get; set; }
+        internal PlayerIndex LastActiveNpad { get; set; }
 
         public Dictionary<PlayerIndex, ConcurrentQueue<(VibrationValue, VibrationValue)>> RumbleQueues = new();
         public Dictionary<PlayerIndex, (VibrationValue, VibrationValue)> LastVibrationValues = new();
@@ -384,6 +385,8 @@ namespace Ryujinx.HLE.HOS.Services.Hid
                 return;
             }
 
+            LastActiveNpad = state.PlayerId;
+            
             ref RingLifo<NpadCommonState> lifo = ref GetCommonStateLifo(ref currentNpad);
 
             NpadCommonState newState = new()
@@ -638,6 +641,21 @@ namespace Ryujinx.HLE.HOS.Services.Hid
             }
 
             return rumbleQueue;
+        }
+        
+        public NpadIdType GetLastActiveNpadId()
+        {
+            return LastActiveNpad switch {
+                PlayerIndex.Player1 => NpadIdType.Player1,
+                PlayerIndex.Player2 => NpadIdType.Player2,
+                PlayerIndex.Player3 => NpadIdType.Player3,
+                PlayerIndex.Player4 => NpadIdType.Player4,
+                PlayerIndex.Player5 => NpadIdType.Player5,
+                PlayerIndex.Player6 => NpadIdType.Player6,
+                PlayerIndex.Player7 => NpadIdType.Player7,
+                PlayerIndex.Player8 => NpadIdType.Player8,
+                _ => NpadIdType.Handheld,
+            };
         }
     }
 }

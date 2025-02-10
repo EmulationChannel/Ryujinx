@@ -1,11 +1,13 @@
 using Ryujinx.Common.Logging;
 using Ryujinx.HLE.Exceptions;
 using Ryujinx.HLE.HOS.Ipc;
+using Ryujinx.HLE.HOS.Services.Nv;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Ryujinx.HLE.HOS.Services
 {
@@ -200,7 +202,7 @@ namespace Ryujinx.HLE.HOS.Services
             }
         }
 
-        protected void MakeObject(ServiceCtx context, IpcService obj)
+        public void MakeObject(ServiceCtx context, IpcService obj)
         {
             obj.TrySetServer(_parent.Server);
 
@@ -279,6 +281,55 @@ namespace Ryujinx.HLE.HOS.Services
             }
 
             _domainObjects.Clear();
+        }
+        
+        public static byte[] StructToBytes<T>(T structure) where T : struct
+        {
+            int size = Marshal.SizeOf(structure);
+            byte[] bytes = new byte[size];
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+
+            try
+            {
+                Marshal.StructureToPtr(structure, ptr, false);
+                Marshal.Copy(ptr, bytes, 0, size);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+
+            return bytes;
+        }
+        
+        public Span<byte> CreateByteSpanFromBuffer(ServiceCtx context, IpcBuffDesc ipcBuff, bool isOutput)
+        {
+            byte[] rawData;
+
+            if (isOutput)
+            {
+                rawData = new byte[ipcBuff.Size];
+            }
+            else
+            {
+                rawData = new byte[ipcBuff.Size];
+
+                context.Memory.Read(ipcBuff.Position, rawData);
+            }
+
+            return new Span<byte>(rawData);
+        }
+
+        public Span<T> CreateSpanFromBuffer<T>(ServiceCtx context, IpcBuffDesc ipcBuff, bool isOutput) where T : unmanaged
+        {
+            return MemoryMarshal.Cast<byte, T>(CreateByteSpanFromBuffer(context, ipcBuff, isOutput));
+        }
+
+        public void WriteSpanToBuffer<T>(ServiceCtx context, IpcBuffDesc ipcBuff, Span<T> span) where T : unmanaged
+        {
+            Span<byte> rawData = MemoryMarshal.Cast<T, byte>(span);
+
+            context.Memory.Write(ipcBuff.Position, rawData);
         }
     }
 }

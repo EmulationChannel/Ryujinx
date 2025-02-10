@@ -22,7 +22,7 @@ namespace Ryujinx.HLE.Loaders.Processes
     {
         private readonly Switch _device;
 
-        private readonly ConcurrentDictionary<ulong, ProcessResult> _processesByPid;
+        public readonly ConcurrentDictionary<ulong, ProcessResult> _processesByPid;
 
         private ulong _latestPid;
 
@@ -31,8 +31,9 @@ namespace Ryujinx.HLE.Loaders.Processes
             get
             {
                 if (!_processesByPid.TryGetValue(_latestPid, out ProcessResult value))
-                    throw new RyujinxException(
-                        $"The HLE Process map did not have a process with ID {_latestPid}. Are you missing firmware?");
+                {
+                    return null;
+                }
                 
                 return value;
             }
@@ -132,6 +133,30 @@ namespace Ryujinx.HLE.Loaders.Processes
 
                         TitleIDs.CurrentApplication.Value = processResult.ProgramIdText;
                     }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        public bool LoadNca(string path, out ProcessResult processResult)
+        {
+            FileStream file = new(path, FileMode.Open, FileAccess.Read);
+            Nca nca = new(_device.Configuration.VirtualFileSystem.KeySet, file.AsStorage(false));
+
+            processResult = nca.Load(_device, null, null);
+
+            if (processResult.ProcessId != 0 && _processesByPid.TryAdd(processResult.ProcessId, processResult))
+            {
+                if (processResult.Start(_device))
+                {
+                    // NOTE: Check if process is SystemApplicationId or ApplicationId
+                    // if (processResult.ProgramId > 0x01000000000007FF)
+                    // {
+                    _latestPid = processResult.ProcessId;
+                    // }
 
                     return true;
                 }
@@ -265,6 +290,12 @@ namespace Ryujinx.HLE.Loaders.Processes
             }
 
             return false;
+        }
+
+        internal void SetActivePID(ulong pid)
+        {
+            _processesByPid.TryRemove(_latestPid, out _);
+            _latestPid = pid;
         }
     }
 }

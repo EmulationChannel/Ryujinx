@@ -223,6 +223,7 @@ namespace Ryujinx.Ava.Utilities.Configuration
                                 ButtonZl = Key.Q,
                                 ButtonSl = Key.Unbound,
                                 ButtonSr = Key.Unbound,
+                                ButtonCapture = Key.Unbound,
                             },
                             LeftJoyconStick = new JoyconConfigKeyboardStick<Key>
                             {
@@ -243,6 +244,7 @@ namespace Ryujinx.Ava.Utilities.Configuration
                                 ButtonZr = Key.O,
                                 ButtonSl = Key.Unbound,
                                 ButtonSr = Key.Unbound,
+                                ButtonHome = Key.Unbound,
                             },
                             RightJoyconStick = new JoyconConfigKeyboardStick<Key>
                             {

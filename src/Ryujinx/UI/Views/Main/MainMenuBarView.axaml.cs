@@ -38,8 +38,10 @@ namespace Ryujinx.Ava.UI.Views.Main
 
             ToggleFileTypesMenuItem.ItemsSource = GenerateToggleFileTypeItems();
             ChangeLanguageMenuItem.ItemsSource = GenerateLanguageMenuItems();
-
+            
             MiiAppletMenuItem.Command = Commands.Create(OpenMiiApplet);
+            PhotoViewerAppletMenuItem.Command = Commands.Create(OpenPhotoViewerApplet);
+            QLaunchAppletMenuItem.Command =  Commands.Create(OpenSystemApplet);
             CloseRyujinxMenuItem.Command = Commands.Create(CloseWindow);
             OpenSettingsMenuItem.Command = Commands.Create(OpenSettings);
             PauseEmulationMenuItem.Command = Commands.Create(() => ViewModel.AppHost?.Pause());
@@ -144,7 +146,6 @@ namespace Ryujinx.Ava.UI.Views.Main
 
             ViewModel.LoadConfigurableHotKeys();
         }
-
         public AppletMetadata MiiApplet => new(ViewModel.ContentManager, "miiEdit", 0x0100000000001009);
         
         public async Task OpenMiiApplet()
@@ -153,6 +154,24 @@ namespace Ryujinx.Ava.UI.Views.Main
                 return;
             
             await ViewModel.LoadApplication(appData, ViewModel.IsFullScreen || ViewModel.StartGamesInFullscreen, nacpData);
+        }
+        
+        public AppletMetadata PhotoViewer => new(ViewModel.ContentManager,"photoViewer", 0x010000000000100D);
+        public async Task OpenPhotoViewerApplet()
+        {
+            if (PhotoViewer.CanStart(ViewModel.ContentManager, out var appData, out var nacpData))
+            {
+                await ViewModel.LoadApplication(appData, ViewModel.IsFullScreen || ViewModel.StartGamesInFullscreen, nacpData);
+            }
+        }
+        
+        public AppletMetadata SystemAppletMenu => new(ViewModel.ContentManager,"qlaunch", 0x0100000000001000ul);
+        public async Task OpenSystemApplet()
+        {
+            if (SystemAppletMenu.CanStart(ViewModel.ContentManager, out var appData, out var nacpData))
+            {
+                await ViewModel.LoadApplication(appData, ViewModel.IsFullScreen || ViewModel.StartGamesInFullscreen, nacpData);
+            }
         }
 
         public async Task OpenCheatManagerForCurrentApp()

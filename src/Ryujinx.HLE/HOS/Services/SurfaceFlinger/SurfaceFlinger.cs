@@ -137,6 +137,12 @@ namespace Ryujinx.HLE.HOS.Services.SurfaceFlinger
                     State = initialState,
                 });
             }
+
+            if (_device.System.IsApplet())
+            {
+                Logger.Info?.Print(LogClass.SurfaceFlinger, $"Created layer {layerId} for applet");
+                _device.Processes.ActiveApplication.RealAppletInstance.Layers.Add(layerId);
+            }
         }
 
         public Vi.ResultCode OpenLayer(ulong pid, long layerId, out IBinder producer)
@@ -413,8 +419,8 @@ namespace Ryujinx.HLE.HOS.Services.SurfaceFlinger
 
             ulong bufferOffset = (ulong)item.GraphicBuffer.Object.Buffer.Surfaces[0].Offset;
 
-            NvMapHandle map = NvMapDeviceFile.GetMapFromHandle(layer.Owner, nvMapHandle);
-
+            NvMapHandle map = NvMapDeviceFile.GetMapFromHandle(nvMapHandle);
+            
             ulong frameBufferAddress = map.Address + bufferOffset;
 
             Format format = ConvertColorFormat(item.GraphicBuffer.Object.Buffer.Surfaces[0].ColorFormat);

@@ -1,4 +1,5 @@
 using Humanizer;
+using LibHac.Common;
 using LibHac.Ns;
 using Ryujinx.Ava;
 using Ryujinx.Common;
@@ -12,6 +13,7 @@ using Ryujinx.HLE.HOS.Applets;
 using Ryujinx.HLE.HOS.Services.Account.Acc;
 using Ryujinx.HLE.HOS.Services.Am.AppletOE.ApplicationProxyService.ApplicationProxy.Types;
 using Ryujinx.HLE.Loaders.Processes;
+using Ryujinx.HLE.HOS.Services.Ns;
 using Ryujinx.HLE.UI;
 using Ryujinx.Input;
 using Ryujinx.Input.HLE;
@@ -558,10 +560,20 @@ namespace Ryujinx.Headless
                 SDL2Driver.Instance.Dispose();
             }
         }
-        
+
         public UserProfile ShowPlayerSelectDialog()
         {
             return AccountSaveDataManager.GetLastUsedUser();
+        }
+
+        public void TakeScreenshot()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsDarkMode()
+        {
+            return false;
         }
     }
 }

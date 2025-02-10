@@ -24,5 +24,13 @@ namespace Ryujinx.HLE.HOS.Services.Ns
 
             return ResultCode.Success;
         }
+
+        [CommandCmif(1)]
+        // GetApplicationDesiredLanguage() -> u32
+        public ResultCode GetApplicationDesiredLanguage(ServiceCtx context)
+        {
+            context.ResponseData.Write((uint)context.Device.Configuration.Region);
+            return ResultCode.Success;
+        }
     }
 }

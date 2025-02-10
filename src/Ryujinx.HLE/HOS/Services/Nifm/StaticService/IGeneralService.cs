@@ -1,6 +1,7 @@
 using Ryujinx.Common;
 using Ryujinx.Common.Logging;
 using Ryujinx.Common.Utilities;
+using Ryujinx.HLE.FileSystem;
 using Ryujinx.HLE.HOS.Services.Nifm.StaticService.GeneralService;
 using Ryujinx.HLE.HOS.Services.Nifm.StaticService.Types;
 using System;
@@ -16,7 +17,7 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
         private IPInterfaceProperties _targetPropertiesCache = null;
         private UnicastIPAddressInformation _targetAddressInfoCache = null;
         private string _cacheChosenInterface = null;
-
+        private readonly UInt128 _interfaceId = UInt128Utils.NextUInt128(Random.Shared);
         public IGeneralService()
         {
             _generalServiceDetail = new GeneralServiceDetail
@@ -43,6 +44,17 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
             return ResultCode.Success;
         }
 
+        [CommandCmif(2)]
+        // CreateScanRequest() -> object<nn::nifm::detail::IScanRequest>
+        public ResultCode CreateScanRequest(ServiceCtx context)
+        {
+            MakeObject(context, new IScanRequest(context.Device.System));
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(4)]
         // CreateRequest(u32 version) -> object<nn::nifm::detail::IRequest>
         public ResultCode CreateRequest(ServiceCtx context)
@@ -91,6 +103,108 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
             return ResultCode.Success;
         }
 
+        [CommandCmif(6)]
+        // EnumerateNetworkInterfaces(u32) -> (u32, buffer<nn::nifm::detail::sf::NetworkInterfaceInfo, 0xa>)
+        public ResultCode EnumerateNetworkInterfaces(ServiceCtx context)
+        {
+            uint count = context.RequestData.ReadUInt32();
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm, new { count });
+            return ResultCode.Success;
+        }
+        
+        
+        [CommandCmif(7)]
+        // EnumerateNetworkProfiles() -> (u32, buffer<nn::nifm::detail::sf::NetworkProfileBasicInfo[], 0x6>)
+        public ResultCode EnumerateNetworkProfiles(ServiceCtx context)
+        {
+            context.ResponseData.Write(0);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(8)]
+        // GetNetworkProfile(nn::util::Uuid) -> buffer<nn::nifm::detail::sf::NetworkProfileData, 0x1a>
+        public ResultCode GetNetworkProfile(ServiceCtx context)
+        {
+            ulong networkProfileDataPosition = context.Request.RecvListBuff[0].Position;
+            UInt128 uuid = context.RequestData.ReadStruct<UInt128>();
+
+            if (uuid != _interfaceId)
+            {
+                return ResultCode.NoInternetConnection;
+            }
+
+            (IPInterfaceProperties interfaceProperties, UnicastIPAddressInformation unicastAddress) = GetLocalInterface(context);
+
+            if (interfaceProperties == null || unicastAddress == null)
+            {
+                return ResultCode.NoInternetConnection;
+            }
+
+            Logger.Info?.Print(LogClass.ServiceNifm, $"Console's local IP is \"{unicastAddress.Address}\".");
+
+            context.Response.PtrBuff[0] = context.Response.PtrBuff[0].WithSize((uint)Unsafe.SizeOf<NetworkProfileData>());
+
+            NetworkProfileData networkProfile = new()
+            {
+                Uuid = _interfaceId,
+            };
+
+            networkProfile.IpSettingData.IpAddressSetting = new IpAddressSetting(interfaceProperties, unicastAddress);
+            networkProfile.IpSettingData.DnsSetting = new DnsSetting(interfaceProperties);
+
+            "RyujinxNetwork"u8.CopyTo(networkProfile.Name.AsSpan());
+
+            context.Memory.Write(networkProfileDataPosition, networkProfile);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(9)]
+        // SetNetworkProfile(buffer<nn::nifm::detail::sf::NetworkProfileData, 0x19>)
+        public ResultCode SetNetworkProfile(ServiceCtx context)
+        {
+            ulong networkProfileDataPosition = context.Request.PtrBuff[0].Position;
+
+            NetworkProfileData networkProfile = context.Memory.Read<NetworkProfileData>(networkProfileDataPosition);
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm, new { networkProfile });
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(10)]
+        // RemoveNetworkProfile(nn::util::Uuid)
+        public ResultCode RemoveNetworkProfile(ServiceCtx context)
+        {
+            UInt128 uuid = context.RequestData.ReadStruct<UInt128>();
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm, new { uuid });
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(11)]
+        // GetScanData(u32) -> (u32, buffer<nn::nifm::detail::sf::AccessPointData, 0xa>)
+        public ResultCode GetScanData(ServiceCtx context)
+        {
+            SystemVersion version = context.Device.System.ContentManager.GetCurrentFirmwareVersion();
+            if (version.Major >= 4)
+            {
+                // TODO: write AccessPointData
+            }
+            else
+            {
+                // TOO: write AccessPointDataOld
+            }
+
+            context.ResponseData.Write(0);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(12)]
         // GetCurrentIpAddress() -> nn::nifm::IpV4Address
         public ResultCode GetCurrentIpAddress(ServiceCtx context)
@@ -124,6 +238,16 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
 
             context.ResponseData.WriteStruct(new IpAddressSetting(interfaceProperties, unicastAddress));
             context.ResponseData.WriteStruct(new DnsSetting(interfaceProperties));
+
+            return ResultCode.Success;
+        }
+        
+           
+        [CommandCmif(17)]
+        // IsWirelessCommunicationEnabled() -> b8
+        public ResultCode IsWirelessCommunicationEnabled(ServiceCtx context)
+        {
+            context.ResponseData.Write(true);
 
             return ResultCode.Success;
         }
