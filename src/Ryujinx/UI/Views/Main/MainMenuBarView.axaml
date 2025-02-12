@@ -60,6 +60,11 @@
                         Header="{ext:Locale MenuBarFileOpenAppletOpenMiiApplet}"
                         Icon="{ext:Icon fa-solid fa-person}"
                         ToolTip.Tip="{ext:Locale MenuBarFileOpenAppletOpenMiiAppletToolTip}" />
+                    <MenuItem
+                        Name="PhotoViewerAppletMenuItem"
+                        Header="{ext:Locale MenuBarFileOpenAppletOpenPhotoViewerApplet}"
+                        Icon="{ext:Icon fa-solid fa-photo-film}"
+                        ToolTip.Tip="{ext:Locale MenuBarFileOpenAppletOpenPhotoViewerAppletToolTip}" />
                 </MenuItem>
                 <Separator />
                 <MenuItem

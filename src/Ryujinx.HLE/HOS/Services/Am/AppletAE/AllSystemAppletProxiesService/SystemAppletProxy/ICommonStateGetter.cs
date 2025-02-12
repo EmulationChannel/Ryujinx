@@ -147,6 +147,9 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
             }
 
             context.Response.HandleDesc = IpcHandleDesc.MakeCopy(_acquiredSleepLockEventHandle);
+            // NOTE: This needs to be signaled when sleep lock is acquired so it does not just wait forever.
+            //       However, since we don't support sleep lock yet, it's fine to signal immediately.
+            _acquiredSleepLockEvent.ReadableEvent.Signal();
 
             Logger.Stub?.PrintStub(LogClass.ServiceAm);
 

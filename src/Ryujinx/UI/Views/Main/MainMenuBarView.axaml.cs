@@ -40,6 +40,7 @@ namespace Ryujinx.Ava.UI.Views.Main
             ChangeLanguageMenuItem.ItemsSource = GenerateLanguageMenuItems();
 
             MiiAppletMenuItem.Command = Commands.Create(OpenMiiApplet);
+            PhotoViewerAppletMenuItem.Command = Commands.Create(OpenPhotoViewerApplet);
             CloseRyujinxMenuItem.Command = Commands.Create(CloseWindow);
             OpenSettingsMenuItem.Command = Commands.Create(OpenSettings);
             PauseEmulationMenuItem.Command = Commands.Create(() => ViewModel.AppHost?.Pause());
@@ -149,6 +150,16 @@ namespace Ryujinx.Ava.UI.Views.Main
                 return;
             
             await ViewModel.LoadApplication(appData, ViewModel.IsFullScreen || ViewModel.StartGamesInFullscreen, nacpData);
+        }
+        
+        public AppletMetadata PhotoViewer => new(ViewModel.ContentManager,"photoViewer", 0x010000000000100D);
+        
+        public async Task OpenPhotoViewerApplet()
+        {
+            if (PhotoViewer.CanStart(ViewModel.ContentManager, out var appData, out var nacpData))
+            {
+                await ViewModel.LoadApplication(appData, ViewModel.IsFullScreen || ViewModel.StartGamesInFullscreen, nacpData);
+            }
         }
 
         public async Task OpenCheatManagerForCurrentApp()

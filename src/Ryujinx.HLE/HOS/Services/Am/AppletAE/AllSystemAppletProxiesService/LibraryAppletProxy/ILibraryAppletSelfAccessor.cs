@@ -1,5 +1,7 @@
 using Ryujinx.Common;
+using Ryujinx.HLE.HOS.Applets;
 using System;
+using System.Runtime.InteropServices;
 
 namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.LibraryAppletProxy
 {
@@ -22,6 +24,21 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Lib
                 miiEditInputData[0] = 0x03; // Hardcoded unknown value.
 
                 _appletStandalone.InputData.Enqueue(miiEditInputData);
+            }
+            else if (context.Device.Processes.ActiveApplication.ProgramId == 0x010000000000100D)
+            {
+                _appletStandalone = new AppletStandalone()
+                {
+                    AppletId = AppletId.PhotoViewer,
+                    LibraryAppletMode = LibraryAppletMode.AllForeground,
+                };
+
+                CommonArguments arguments = new CommonArguments();
+                ReadOnlySpan<byte> data = MemoryMarshal.Cast<CommonArguments, byte>(MemoryMarshal.CreateReadOnlySpan(ref arguments, 1));
+                byte[] argumentsBytes = data.ToArray();
+                _appletStandalone.InputData.Enqueue(argumentsBytes);
+                byte[] optionBytes = BitConverter.GetBytes(1);
+                _appletStandalone.InputData.Enqueue(optionBytes);
             }
             else
             {

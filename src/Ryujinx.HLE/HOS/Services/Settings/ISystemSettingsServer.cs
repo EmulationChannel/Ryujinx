@@ -290,6 +290,17 @@ namespace Ryujinx.HLE.HOS.Services.Settings
 
             return ResultCode.Success;
         }
+        
+        [CommandCmif(79)]
+        // GetProductModel() -> s32
+        public ResultCode GetProductModel(ServiceCtx context)
+        {
+            context.ResponseData.Write(1);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
 
         [CommandCmif(90)]
         // GetMiiAuthorId() -> nn::util::Uuid
