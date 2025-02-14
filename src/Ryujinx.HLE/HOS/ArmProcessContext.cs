@@ -24,7 +24,7 @@ namespace Ryujinx.HLE.HOS
         private readonly ICpuContext _cpuContext;
         private T _memoryManager;
 
-        public IVirtualMemoryManager AddressSpace => _memoryManager;
+        public IVirtualMemoryManagerTracked AddressSpace => _memoryManager;
 
         public ulong AddressSpaceSize { get; }
 
@@ -59,7 +59,7 @@ namespace Ryujinx.HLE.HOS
         public void Execute(IExecutionContext context, ulong codeAddress)
         {
             // We must wait until shader cache is loaded, among other things, before executing CPU code.
-            _gpuContext.WaitUntilGpuReady();
+            //_gpuContext.WaitUntilGpuReady();
             _cpuContext.Execute(context, codeAddress);
         }
 

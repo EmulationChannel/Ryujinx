@@ -1,10 +1,12 @@
 using Ryujinx.Common.Logging;
+using Ryujinx.HLE.HOS.Applets;
 using Ryujinx.HLE.HOS.Ipc;
 using Ryujinx.HLE.HOS.Kernel.Threading;
 using Ryujinx.HLE.HOS.Services.Settings.Types;
 using Ryujinx.HLE.HOS.Services.Vi.RootService.ApplicationDisplayService;
 using Ryujinx.HLE.HOS.SystemState;
 using Ryujinx.Horizon.Common;
+using Ryujinx.Horizon.Sdk.Applet;
 using Ryujinx.Horizon.Sdk.Lbl;
 using System;
 
@@ -16,6 +18,7 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
 
         private readonly Apm.ManagerServer _apmManagerServer;
         private readonly Apm.SystemManagerServer _apmSystemManagerServer;
+        private readonly RealApplet _applet;
 
         private bool _vrModeEnabled;
 #pragma warning disable CS0414, IDE0052 // Remove unread private member
@@ -28,9 +31,10 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         private readonly KEvent _acquiredSleepLockEvent;
         private int _acquiredSleepLockEventHandle;
 
-        public ICommonStateGetter(ServiceCtx context)
+        public ICommonStateGetter(ServiceCtx context, ulong pid)
         {
             _context = context;
+            _applet = context.Device.System.WindowSystem.GetByAruId(pid);
 
             _apmManagerServer = new Apm.ManagerServer(context);
             _apmSystemManagerServer = new Apm.SystemManagerServer(context);
@@ -42,7 +46,7 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // GetEventHandle() -> handle<copy>
         public ResultCode GetEventHandle(ServiceCtx context)
         {
-            KEvent messageEvent = context.Device.System.AppletState.MessageEvent;
+            KEvent messageEvent = _applet.AppletState.MessageEvent;
 
             if (_messageEventHandle == 0)
             {
@@ -61,25 +65,12 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // ReceiveMessage() -> nn::am::AppletMessage
         public ResultCode ReceiveMessage(ServiceCtx context)
         {
-            if (!context.Device.System.AppletState.Messages.TryDequeue(out AppletMessage message))
+            if (!_applet.AppletState.PopMessage(out AppletMessage message))
             {
                 return ResultCode.NoMessages;
             }
 
-            KEvent messageEvent = context.Device.System.AppletState.MessageEvent;
-
-            // NOTE: Service checks if current states are different than the stored ones.
-            //       Since we don't support any states for now, it's fine to check if there is still messages available.
-
-            if (context.Device.System.AppletState.Messages.IsEmpty)
-            {
-                messageEvent.ReadableEvent.Clear();
-            }
-            else
-            {
-                messageEvent.ReadableEvent.Signal();
-            }
-
+            Logger.Info?.Print(LogClass.ServiceAm, $"pid: {_applet.ProcessHandle.Pid}, msg={message}");
             context.ResponseData.Write((int)message);
 
             return ResultCode.Success;
@@ -109,7 +100,7 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // GetBootMode() -> u8
         public ResultCode GetBootMode(ServiceCtx context)
         {
-            context.ResponseData.Write((byte)0); //Unknown value.
+            context.ResponseData.Write((byte)0); // PmBootMode_Normal
 
             Logger.Stub?.PrintStub(LogClass.ServiceAm);
 
@@ -120,7 +111,14 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // GetCurrentFocusState() -> u8
         public ResultCode GetCurrentFocusState(ServiceCtx context)
         {
-            context.ResponseData.Write((byte)context.Device.System.AppletState.FocusState);
+            FocusState focusState;
+            lock (_applet.Lock)
+            {
+                focusState = _applet.AppletState.GetAndClearFocusState();
+            }
+
+            Logger.Info?.Print(LogClass.ServiceAm, $"pid: {_applet.ProcessHandle.Pid}, GetCurrentFocusState():{focusState}");
+            context.ResponseData.Write((byte)focusState);
 
             return ResultCode.Success;
         }
@@ -130,6 +128,8 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         public ResultCode RequestToAcquireSleepLock(ServiceCtx context)
         {
             Logger.Stub?.PrintStub(LogClass.ServiceAm);
+
+            _acquiredSleepLockEvent.ReadableEvent.Signal();
 
             return ResultCode.Success;
         }
@@ -147,6 +147,29 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
             }
 
             context.Response.HandleDesc = IpcHandleDesc.MakeCopy(_acquiredSleepLockEventHandle);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(20)]
+        // PushToGeneralChannel(object<nn::am::service::IStorage>)
+        public ResultCode PushInData(ServiceCtx context)
+        {
+            IStorage data = GetObject<IStorage>(context, 0);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(31)]
+        [CommandCmif(32)]
+        // GetReaderLockAccessorEx(u32) -> object<nn::am::service::ILockAccessor>
+        public ResultCode GetReaderLockAccessorEx(ServiceCtx context)
+        {
+            int lockId = context.RequestData.ReadInt32();
+
+            MakeObject(context, new ILockAccessor(lockId, context.Device.System));
 
             Logger.Stub?.PrintStub(LogClass.ServiceAm);
 
@@ -214,7 +237,7 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
 
             _vrModeEnabled = vrModeEnabled;
 
-            using LblApi lblApi = new();
+            using var lblApi = new LblApi();
 
             if (vrModeEnabled)
             {
@@ -291,11 +314,46 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
             return ResultCode.Success;
         }
 
+        [CommandCmif(68)]
+        // GetBuiltInDisplayType() -> u32 type
+        public ResultCode GetBuiltInDisplayType(ServiceCtx context)
+        {
+            context.ResponseData.Write(0);
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(91)] // 7.0.0+
         // GetCurrentPerformanceConfiguration() -> nn::apm::PerformanceConfiguration
         public ResultCode GetCurrentPerformanceConfiguration(ServiceCtx context)
         {
             return (ResultCode)_apmSystemManagerServer.GetCurrentPerformanceConfiguration(context);
+        }
+        
+        [CommandCmif(120)] // 13.0.0+
+        // GetAppletLaunchedHistory() -> s32, buffer<AppletId>
+        public ResultCode GetAppletLaunchedHistory(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            var buffer = context.Request.ReceiveBuff[0];
+            int applets = 0;
+            Span<RealAppletId> appletsBuffer = CreateSpanFromBuffer<RealAppletId>(context, buffer, true);
+            foreach (var applet in context.Device.System.WindowSystem.GetApplets())
+            {
+                applets++;
+                appletsBuffer[applets - 1] = applet.AppletId;
+            }
+            context.ResponseData.Write((uint)applets);
+            WriteSpanToBuffer<RealAppletId>(context, buffer, appletsBuffer);
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(200)]
+        // GetOperationModeSystemInfo() -> u32
+        public ResultCode GetOperationModeSystemInfo(ServiceCtx context)
+        {
+            context.ResponseData.Write(0);
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            return ResultCode.Success;
         }
 
         [CommandCmif(300)] // 9.0.0+

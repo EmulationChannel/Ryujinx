@@ -16,9 +16,11 @@ using Ryujinx.Graphics.Metal;
 using Ryujinx.Graphics.OpenGL;
 using Ryujinx.Graphics.Vulkan;
 using Ryujinx.HLE;
+using Ryujinx.HLE.HOS.Services.Ns.Types;
 using Ryujinx.Input;
 using Silk.NET.Vulkan;
 using System;
+using System.Collections.Immutable;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -116,6 +118,7 @@ namespace Ryujinx.Headless
                             ButtonZl = Key.Q,
                             ButtonSl = Key.Unbound,
                             ButtonSr = Key.Unbound,
+                            ButtonCapture = Key.Unbound,
                         },
 
                         LeftJoyconStick = new JoyconConfigKeyboardStick<Key>
@@ -138,6 +141,7 @@ namespace Ryujinx.Headless
                             ButtonZr = Key.O,
                             ButtonSl = Key.Unbound,
                             ButtonSr = Key.Unbound,
+                            ButtonHome = Key.Unbound,
                         },
 
                         RightJoyconStick = new JoyconConfigKeyboardStick<Key>
@@ -176,6 +180,7 @@ namespace Ryujinx.Headless
                             ButtonZl = ConfigGamepadInputId.LeftTrigger,
                             ButtonSl = ConfigGamepadInputId.Unbound,
                             ButtonSr = ConfigGamepadInputId.Unbound,
+                            ButtonCapture = ConfigGamepadInputId.Capture,
                         },
 
                         LeftJoyconStick = new JoyconConfigControllerStick<ConfigGamepadInputId, ConfigStickInputId>
@@ -198,6 +203,7 @@ namespace Ryujinx.Headless
                             ButtonZr = ConfigGamepadInputId.RightTrigger,
                             ButtonSl = ConfigGamepadInputId.Unbound,
                             ButtonSr = ConfigGamepadInputId.Unbound,
+                            ButtonHome = ConfigGamepadInputId.Home,
                         },
 
                         RightJoyconStick = new JoyconConfigControllerStick<ConfigGamepadInputId, ConfigStickInputId>
@@ -333,6 +339,7 @@ namespace Ryujinx.Headless
                 _libHacHorizonManager,
                 _contentManager,
                 _accountManager,
+                new ImmutableArray<RyuApplicationData>(),
                 _userChannelPersistence,
                 renderer,
                 new SDL2HardwareDeviceDriver(),

@@ -49,7 +49,9 @@ namespace Ryujinx.Input.HLE
             new(GamepadButtonInputId.SingleLeftTrigger0, ControllerKeys.SlLeft),
             new(GamepadButtonInputId.SingleRightTrigger0, ControllerKeys.SrLeft),
             new(GamepadButtonInputId.SingleLeftTrigger1, ControllerKeys.SlRight),
-            new(GamepadButtonInputId.SingleRightTrigger1, ControllerKeys.SrRight)
+            new(GamepadButtonInputId.SingleRightTrigger1, ControllerKeys.SrRight),
+            new(GamepadButtonInputId.Capture, ControllerKeys.Capture),
+            new(GamepadButtonInputId.Home, ControllerKeys.Home)
         ];
 
         private class HLEKeyboardMappingEntry

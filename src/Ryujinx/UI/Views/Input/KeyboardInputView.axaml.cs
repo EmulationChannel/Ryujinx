@@ -85,7 +85,7 @@ namespace Ryujinx.Ava.UI.Views.Input
                                     break;
                                 case "ButtonMinus":
                                     viewModel.Config.ButtonMinus = buttonValue.AsHidType<Key>();
-                                    break;
+                                    break; 
                                 case "LeftStickButton":
                                     viewModel.Config.LeftStickButton = buttonValue.AsHidType<Key>();
                                     break;
@@ -160,6 +160,12 @@ namespace Ryujinx.Ava.UI.Views.Input
                                     break;
                                 case "RightStickLeft":
                                     viewModel.Config.RightStickLeft = buttonValue.AsHidType<Key>();
+                                    break;
+                                case "ButtonCapture":
+                                    viewModel.Config.ButtonCapture = buttonValue.AsHidType<Key>();
+                                    break;
+                                case "ButtonHome":
+                                    viewModel.Config.ButtonHome = buttonValue.AsHidType<Key>();
                                     break;
                             }
                         }

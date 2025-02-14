@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Ryujinx.Horizon.Sdk.OsTypes.Impl
 {
-    class MultiWaitImpl
+    public class MultiWaitImpl
     {
         private const int WaitTimedOut = -1;
         private const int WaitCancelled = -2;

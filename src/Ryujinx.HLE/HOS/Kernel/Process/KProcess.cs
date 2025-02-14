@@ -86,7 +86,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
 
         private IProcessContextFactory _contextFactory;
         public IProcessContext Context { get; private set; }
-        public IVirtualMemoryManager CpuMemory => Context.AddressSpace;
+        public IVirtualMemoryManagerTracked CpuMemory => Context.AddressSpace;
 
         public HleProcessDebugger Debugger { get; private set; }
 
@@ -1174,6 +1174,11 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
         public bool IsSvcPermitted(int svcId)
         {
             return Capabilities.IsSvcPermitted(svcId);
+        }
+
+        public bool IsRunning()
+        {
+            return State == ProcessState.Started || State == ProcessState.Attached || State == ProcessState.DebugSuspended;
         }
     }
 }

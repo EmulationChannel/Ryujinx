@@ -73,11 +73,13 @@ namespace Ryujinx.HLE.HOS.Services.Account.Acc
         }
 
         [CommandCmif(51)]
+        [CommandCmif(52)]
         // TrySelectUserWithoutInteraction(bool) -> nn::account::Uid
         public ResultCode TrySelectUserWithoutInteraction(ServiceCtx context)
         {
             return _applicationServiceServer.TrySelectUserWithoutInteraction(context);
         }
+        
 
         [CommandCmif(102)]
         // GetBaasAccountManagerForSystemService(nn::account::Uid) -> object<nn::account::baas::IManagerForApplication>
@@ -119,6 +121,25 @@ namespace Ryujinx.HLE.HOS.Services.Account.Acc
             }
 
             MakeObject(context, new IProfileEditor(userProfile));
+
+            // Doesn't occur in our case.
+            // return ResultCode.NullObject;
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(250)]
+        // GetBaasAccountAdministrator(nn::account::Uid) -> object<nn::account::baas::IAdministrator>
+        public ResultCode GetBaasAccountAdministrator(ServiceCtx context)
+        {
+            ResultCode resultCode = _applicationServiceServer.CheckUserId(context, out UserId userId);
+
+            if (resultCode != ResultCode.Success)
+            {
+                return resultCode;
+            }
+
+            MakeObject(context, new IAdministrator(userId));
 
             // Doesn't occur in our case.
             // return ResultCode.NullObject;

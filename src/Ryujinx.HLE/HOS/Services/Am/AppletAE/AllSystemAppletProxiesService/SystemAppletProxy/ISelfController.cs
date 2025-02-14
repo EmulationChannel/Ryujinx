@@ -1,4 +1,5 @@
 using Ryujinx.Common.Logging;
+using Ryujinx.HLE.HOS.Applets;
 using Ryujinx.HLE.HOS.Ipc;
 using Ryujinx.HLE.HOS.Kernel.Threading;
 using Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.SystemAppletProxy.Types;
@@ -11,8 +12,8 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
     class ISelfController : IpcService
     {
         private readonly ulong _pid;
+        private readonly RealApplet _applet;
 
-        private readonly KEvent _libraryAppletLaunchableEvent;
         private int _libraryAppletLaunchableEventHandle;
 
         private KEvent _accumulatedSuspendedTickChangedEvent;
@@ -29,8 +30,6 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         private bool _screenShotPermission = false;
         private bool _operationModeChangedNotification = false;
         private bool _performanceModeChangedNotification = false;
-        private bool _restartMessageEnabled = false;
-        private bool _outOfFocusSuspendingEnabled = false;
         private bool _handlesRequestToDisplay = false;
 #pragma warning restore IDE0052
         private bool _autoSleepDisabled = false;
@@ -44,8 +43,8 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
 
         public ISelfController(ServiceCtx context, ulong pid)
         {
-            _libraryAppletLaunchableEvent = new KEvent(context.Device.System.KernelContext);
             _pid = pid;
+            _applet = context.Device.System.WindowSystem.GetByAruId(_pid);
         }
 
         [CommandCmif(0)]
@@ -54,6 +53,8 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         {
             Logger.Stub?.PrintStub(LogClass.ServiceAm);
 
+            _applet.ProcessHandle.Terminate();
+
             return ResultCode.Success;
         }
 
@@ -61,7 +62,17 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // LockExit()
         public ResultCode LockExit(ServiceCtx context)
         {
-            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            lock (_applet.Lock)
+            {
+                if (_applet.AppletState.HasRequestedExit)
+                {
+                    _applet.ProcessHandle.Terminate();
+                }
+                else
+                {
+                    _applet.ExitLocked = true;
+                }
+            }
 
             return ResultCode.Success;
         }
@@ -70,7 +81,15 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // UnlockExit()
         public ResultCode UnlockExit(ServiceCtx context)
         {
-            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            lock (_applet.Lock)
+            {
+                _applet.ExitLocked = false;
+
+                if (_applet.AppletState.HasRequestedExit)
+                {
+                    _applet.ProcessHandle.Terminate();
+                }
+            }
 
             return ResultCode.Success;
         }
@@ -112,11 +131,12 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // GetLibraryAppletLaunchableEvent() -> handle<copy>
         public ResultCode GetLibraryAppletLaunchableEvent(ServiceCtx context)
         {
-            _libraryAppletLaunchableEvent.ReadableEvent.Signal();
+            var evnt = _applet.AppletState.LaunchableEvent;
+            evnt.ReadableEvent.Signal();
 
             if (_libraryAppletLaunchableEventHandle == 0)
             {
-                if (context.Process.HandleTable.GenerateHandle(_libraryAppletLaunchableEvent.ReadableEvent, out _libraryAppletLaunchableEventHandle) != Result.Success)
+                if (context.Process.HandleTable.GenerateHandle(evnt.ReadableEvent, out _libraryAppletLaunchableEventHandle) != Result.Success)
                 {
                     throw new InvalidOperationException("Out of handles!");
                 }
@@ -172,11 +192,18 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // SetFocusHandlingMode(b8, b8, b8)
         public ResultCode SetFocusHandlingMode(ServiceCtx context)
         {
-            bool unknownFlag1 = context.RequestData.ReadBoolean();
-            bool unknownFlag2 = context.RequestData.ReadBoolean();
-            bool unknownFlag3 = context.RequestData.ReadBoolean();
+            bool notify = context.RequestData.ReadBoolean();
+            bool background = context.RequestData.ReadBoolean();
+            bool suspend = context.RequestData.ReadBoolean();
 
-            Logger.Stub?.PrintStub(LogClass.ServiceAm, new { unknownFlag1, unknownFlag2, unknownFlag3 });
+            Logger.Stub?.PrintStub(LogClass.ServiceAm, new { notify, background, suspend });
+
+            lock (_applet.Lock)
+            {
+                _applet.AppletState.SetFocusHandlingMode(suspend);
+                _applet.AppletState.FocusStateChangedNotificationEnabled = notify;
+                _applet.UpdateSuspensionStateLocked(true);
+            }
 
             return ResultCode.Success;
         }
@@ -189,8 +216,19 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
 
             Logger.Stub?.PrintStub(LogClass.ServiceAm, new { restartMessageEnabled });
 
-            _restartMessageEnabled = restartMessageEnabled;
+            lock (_applet.Lock)
+            {
+                _applet.AppletState.ResumeNotificationEnabled = restartMessageEnabled;
+            }
 
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(15)]
+        // SetScreenShotAppletIdentityInfo()
+        public ResultCode SetScreenShotAppletIdentityInfo(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
             return ResultCode.Success;
         }
 
@@ -202,7 +240,11 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
 
             Logger.Stub?.PrintStub(LogClass.ServiceAm, new { outOfFocusSuspendingEnabled });
 
-            _outOfFocusSuspendingEnabled = outOfFocusSuspendingEnabled;
+            lock (_applet.Lock)
+            {
+                _applet.AppletState.SetOutOfFocusSuspendingEnabled(outOfFocusSuspendingEnabled);
+                _applet.UpdateSuspensionStateLocked(false);
+            }
 
             return ResultCode.Success;
         }
@@ -225,7 +267,6 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         public ResultCode CreateManagedDisplayLayer(ServiceCtx context)
         {
             context.Device.System.SurfaceFlinger.CreateLayer(out long layerId, _pid);
-            context.Device.System.SurfaceFlinger.SetRenderLayer(layerId);
 
             context.ResponseData.Write(layerId);
 
@@ -236,9 +277,18 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // IsSystemBufferSharingEnabled()
         public ResultCode IsSystemBufferSharingEnabled(ServiceCtx context)
         {
-            // NOTE: Service checks a private field and return an error if the SystemBufferSharing is disabled.
+            // TODO: Implement this once we have a way to check if we're not an AppletId.Application   
+            return ResultCode.Success;
+        }
 
-            return ResultCode.NotImplemented;
+        [CommandCmif(42)] // 4.0.0+
+        // GetSystemSharedLayerHandle() -> (nn::vi::fbshare::SharedBufferHandle, nn::vi::fbshare::SharedLayerHandle)
+        public ResultCode GetSystemSharedLayerHandle(ServiceCtx context)
+        {
+            context.ResponseData.Write((ulong)context.Device.System.ViServerS.GetSharedBufferNvMapId());
+            context.ResponseData.Write(context.Device.System.ViServerS.GetSharedLayerId());
+
+            return ResultCode.Success;
         }
 
         [CommandCmif(44)] // 10.0.0+
@@ -247,7 +297,6 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         {
             context.Device.System.SurfaceFlinger.CreateLayer(out long displayLayerId, _pid);
             context.Device.System.SurfaceFlinger.CreateLayer(out long recordingLayerId, _pid);
-            context.Device.System.SurfaceFlinger.SetRenderLayer(displayLayerId);
 
             context.ResponseData.Write(displayLayerId);
             context.ResponseData.Write(recordingLayerId);
@@ -264,6 +313,20 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
             Logger.Stub?.PrintStub(LogClass.ServiceAm, new { handlesRequestToDisplay });
 
             _handlesRequestToDisplay = handlesRequestToDisplay;
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(60)]
+        // OverrideAutoSleepTimeAndDimmingTime(i32, i32, i32, i32)
+        public ResultCode OverrideAutoSleepTimeAndDimmingTime(ServiceCtx context)
+        {
+            int unk1 = context.RequestData.ReadInt32();
+            int unk2 = context.RequestData.ReadInt32();
+            int unk3 = context.RequestData.ReadInt32();
+            int unk4 = context.RequestData.ReadInt32();
+
+            Logger.Stub?.PrintStub(LogClass.ServiceAm, new { unk1, unk2, unk3, unk4 });
 
             return ResultCode.Success;
         }
@@ -288,6 +351,17 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
             context.ResponseData.Write(_idleTimeDetectionExtension);
 
             Logger.Stub?.PrintStub(LogClass.ServiceAm, new { _idleTimeDetectionExtension });
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(64)]
+        // SetInputDetectionSourceSet(u32)
+        public ResultCode SetInputDetectionSourceSet(ServiceCtx context)
+        {
+            uint inputDetectionSourceSet = context.RequestData.ReadUInt32();
+
+            Logger.Stub?.PrintStub(LogClass.ServiceAm, new { inputDetectionSourceSet });
 
             return ResultCode.Success;
         }
@@ -348,6 +422,14 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
             return ResultCode.Success;
         }
 
+        [CommandCmif(72)]
+        // SetInputDetectionPolicy()
+        public ResultCode SetInputDetectionPolicy(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(80)] // 4.0.0+
         // SetWirelessPriorityMode(s32 wireless_priority_mode)
         public ResultCode SetWirelessPriorityMode(ServiceCtx context)

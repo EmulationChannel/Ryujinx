@@ -460,6 +460,36 @@ namespace Ryujinx.Ava.Utilities.Configuration
         public ulong[] DirtyHacks { get; set; }
         
         /// <summary>
+        ///  Runs missing applets as real ones
+        /// </summary>
+        public bool MissingAppletsAsReal { get; set; }
+        
+        /// <summary>
+        /// Launches the SoftwareKeyboard as a real applet
+        /// </summary>
+        public bool SoftwareKeyboardIsReal { get; set; }        
+            
+        /// <summary>
+        /// Launches the Browser as a real applet
+        /// </summary>
+        public bool BrowserIsReal { get; set; }        
+            
+        /// <summary>
+        /// Launches the Controller as a real applet
+        /// </summary>
+        public bool ControllerIsReal { get; set; }        
+            
+        /// <summary>
+        /// Launches the PlayerSelect as a real applet
+        /// </summary>
+        public bool PlayerSelectIsReal { get; set; }        
+            
+        /// <summary>
+        /// Launches the Cabinet as a real applet
+        /// </summary>
+        public bool CabinetIsReal { get; set; }
+        
+        /// <summary>
         /// Loads a configuration file from disk
         /// </summary>
         /// <param name="path">The path to the JSON configuration file</param>

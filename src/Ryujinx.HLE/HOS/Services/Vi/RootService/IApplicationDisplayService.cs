@@ -126,7 +126,7 @@ namespace Ryujinx.HLE.HOS.Services.Vi.RootService
             ulong displayInfoBuffer = context.Request.ReceiveBuff[0].Position;
 
             // TODO: Determine when more than one display is needed.
-            ulong displayCount = 1;
+            ulong displayCount = 2;
 
             for (int i = 0; i < (int)displayCount; i++)
             {
@@ -248,8 +248,6 @@ namespace Ryujinx.HLE.HOS.Services.Vi.RootService
                 return result;
             }
 
-            context.Device.System.SurfaceFlinger.SetRenderLayer(layerId);
-
             using Parcel parcel = new(0x28, 0x4);
 
             parcel.WriteObject(producer, "dispdrv\0");
@@ -285,9 +283,7 @@ namespace Ryujinx.HLE.HOS.Services.Vi.RootService
 
             // TODO: support multi display.
             IBinder producer = context.Device.System.SurfaceFlinger.CreateLayer(out long layerId, 0, LayerState.Stray);
-
-            context.Device.System.SurfaceFlinger.SetRenderLayer(layerId);
-
+            
             using Parcel parcel = new(0x28, 0x4);
 
             parcel.WriteObject(producer, "dispdrv\0");
@@ -392,7 +388,7 @@ namespace Ryujinx.HLE.HOS.Services.Vi.RootService
             RenderingSurfaceInfo surfaceInfo = new(ColorFormat.A8B8G8R8, (uint)layerWidth, (uint)layerHeight, (uint)pitch, (uint)layerBuffSize);
 
             // Get the applet associated with the handle.
-            object appletObject = context.Device.System.AppletState.IndirectLayerHandles.GetData((int)layerHandle);
+            object appletObject = context.Device.System.GetAppletState(context.Process.Pid).IndirectLayerHandles.GetData((int)layerHandle);
 
             if (appletObject == null)
             {

@@ -1,3 +1,4 @@
+using Ryujinx.Common.Logging;
 using Ryujinx.Horizon.Bcat.Types;
 using Ryujinx.Horizon.Common;
 using Ryujinx.Horizon.Sdk.Bcat;
@@ -14,6 +15,14 @@ namespace Ryujinx.Horizon.Bcat.Ipc
         {
             deliveryCacheProgressService = new DeliveryCacheProgressService();
 
+            return Result.Success;
+        }
+        
+        [CmifCommand(30300)]
+        // RegisterSystemApplicationDeliveryTasks
+        public Result RegisterSystemApplicationDeliveryTasks()
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceBcat);
             return Result.Success;
         }
     }

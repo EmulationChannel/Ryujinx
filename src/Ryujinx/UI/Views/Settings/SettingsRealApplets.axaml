@@ -1,0 +1,142 @@
+<UserControl
+    x:Class="Ryujinx.Ava.UI.Views.Settings.SettingsRealAppsView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:Ryujinx.Ava.UI.ViewModels"
+    xmlns:helpers="clr-namespace:Ryujinx.Ava.UI.Helpers"
+    mc:Ignorable="d"
+    x:DataType="viewModels:SettingsViewModel">
+    
+    <!-- Resources -->
+    <UserControl.Resources>
+        <helpers:BoolToIndexConverter x:Key="BoolToIndexConverter" />
+    </UserControl.Resources>
+
+    <Design.DataContext>
+        <viewModels:SettingsViewModel />
+    </Design.DataContext>
+
+    <ScrollViewer HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+        <Border Classes="settings">
+            <StackPanel Margin="10"
+                        HorizontalAlignment="Left"
+                        Orientation="Vertical"
+                        Spacing="10">
+                <!-- Header -->
+                <TextBlock HorizontalAlignment="Center"
+                           Classes="h1"
+                           Text="Real Applets" />
+                <TextBlock Foreground="{DynamicResource SecondaryTextColor}"
+                           TextDecorations="Underline"
+                           Text="This is a collection of real applet options." />
+
+                <!-- Missing Applets Row -->
+                <Grid Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Width="100"
+                              SelectedIndex="{Binding MissingAppletsAsReal, Mode=TwoWay, Converter={StaticResource BoolToIndexConverter}}">
+                        <ComboBoxItem Content="Real" />
+                        <ComboBoxItem Content="Skip" />
+                    </ComboBox>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Text="Missing Applets" />
+                </Grid>
+
+                <!-- Software Keyboard Row -->
+                <Grid Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Width="100"
+                              SelectedIndex="{Binding SoftwareKeyboardIsReal, Mode=TwoWay, Converter={StaticResource BoolToIndexConverter}}">
+                        <ComboBoxItem Content="Real" />
+                        <ComboBoxItem Content="Software" />
+                    </ComboBox>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Text="Software Keyboard" />
+                </Grid>
+
+                <!-- Browser Row -->
+                <Grid Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Width="100"
+                              SelectedIndex="{Binding BrowserIsReal, Mode=TwoWay, Converter={StaticResource BoolToIndexConverter}}">
+                        <ComboBoxItem Content="Real" />
+                        <ComboBoxItem Content="Software" />
+                    </ComboBox>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Text="Browser" />
+                </Grid>
+
+                <!-- Controller Row -->
+                <Grid Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Width="100"
+                              SelectedIndex="{Binding ControllerIsReal, Mode=TwoWay, Converter={StaticResource BoolToIndexConverter}}">
+                        <ComboBoxItem Content="Real" />
+                        <ComboBoxItem Content="Software" />
+                    </ComboBox>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Text="Controller" />
+                </Grid>
+
+                <!-- Player Select Row -->
+                <Grid Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Width="100"
+                              SelectedIndex="{Binding PlayerSelectIsReal, Mode=TwoWay, Converter={StaticResource BoolToIndexConverter}}">
+                        <ComboBoxItem Content="Real" />
+                        <ComboBoxItem Content="Software" />
+                    </ComboBox>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Text="Player Select" />
+                </Grid>
+
+                <!-- Cabinet Row -->
+                <Grid Margin="10,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Width="100"
+                              SelectedIndex="{Binding CabinetIsReal, Mode=TwoWay, Converter={StaticResource BoolToIndexConverter}}">
+                        <ComboBoxItem Content="Real" />
+                        <ComboBoxItem Content="Software" />
+                    </ComboBox>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Text="Cabinet" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </ScrollViewer>
+</UserControl>

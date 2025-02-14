@@ -37,10 +37,9 @@ namespace Ryujinx.HLE.HOS.Services.Vi.RootService.ApplicationDisplayService
 #pragma warning restore IDE0059
             long appletResourceUserId = context.RequestData.ReadInt64();
 
-            ulong pid = context.Device.System.AppletState.AppletResourceUserIds.GetData<ulong>((int)appletResourceUserId);
+            ulong pid = context.Device.System.GetAppletState(context.Process.Pid).AppletResourceUserIds.GetData<ulong>((int)appletResourceUserId);
 
             context.Device.System.SurfaceFlinger.CreateLayer(out long layerId, pid);
-            context.Device.System.SurfaceFlinger.SetRenderLayer(layerId);
 
             context.ResponseData.Write(layerId);
 

@@ -20,6 +20,8 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE
         PhotoViewer = 0x15,
         Settings = 0x16,
         LibAppletOff = 0x17,
+        LibAppletOffFw17 = 0x32,
+        LibAppletOff2Fw17 = 0x33,
         LibAppletWhitelisted = 0x18,
         LibAppletAuth = 0x19,
         MyPage = 0x1A,

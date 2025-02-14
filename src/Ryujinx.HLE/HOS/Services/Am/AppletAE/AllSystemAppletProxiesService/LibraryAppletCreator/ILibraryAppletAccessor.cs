@@ -26,9 +26,11 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Lib
         private int _interactiveOutDataEventHandle;
 
         private int _indirectLayerHandle;
+        public ulong _pid = 0;
 
-        public ILibraryAppletAccessor(AppletId appletId, Horizon system)
+        public ILibraryAppletAccessor(AppletId appletId, Horizon system, ulong processId)
         {
+            _pid = processId;
             _kernelContext = system.KernelContext;
 
             _stateChangedEvent = new KEvent(system.KernelContext);
@@ -226,7 +228,7 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Lib
         {
             Horizon horizon = _kernelContext.Device.System;
 
-            _indirectLayerHandle = horizon.AppletState.IndirectLayerHandles.Add(_applet);
+            _indirectLayerHandle = horizon.GetAppletState(_pid).IndirectLayerHandles.Add(_applet);
 
             context.ResponseData.Write((ulong)_indirectLayerHandle);
 
@@ -255,7 +257,7 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Lib
 
             Horizon horizon = _kernelContext.Device.System;
 
-            horizon.AppletState.IndirectLayerHandles.Delete(_indirectLayerHandle);
+            horizon.GetAppletState(_pid).IndirectLayerHandles.Delete(_indirectLayerHandle);
         }
     }
 }

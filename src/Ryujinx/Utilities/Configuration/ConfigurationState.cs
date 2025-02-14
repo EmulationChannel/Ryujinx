@@ -145,6 +145,12 @@ namespace Ryujinx.Ava.Utilities.Configuration
                 LdnServer = Multiplayer.LdnServer,
                 ShowDirtyHacks = Hacks.ShowDirtyHacks,
                 DirtyHacks = Hacks.EnabledHacks.Select(it => it.Pack()).ToArray(),
+                MissingAppletsAsReal = System.MissingAppletsAsReal,
+                SoftwareKeyboardIsReal = System.SoftwareKeyboardIsReal,
+                BrowserIsReal = System.BrowserIsReal,
+                ControllerIsReal = System.ControllerIsReal,
+                PlayerSelectIsReal = System.PlayerSelectIsReal,
+                CabinetIsReal = System.CabinetIsReal,
             };
 
             return configurationFile;
@@ -205,6 +211,12 @@ namespace Ryujinx.Ava.Utilities.Configuration
             System.DramSize.Value = MemoryConfiguration.MemoryConfiguration4GiB;
             System.IgnoreMissingServices.Value = false;
             System.IgnoreApplet.Value = false;
+            System.MissingAppletsAsReal.Value = false;
+            System.SoftwareKeyboardIsReal.Value = false;
+            System.BrowserIsReal.Value = false;
+            System.ControllerIsReal.Value = false;
+            System.PlayerSelectIsReal.Value = false;
+            System.CabinetIsReal.Value = false;
             System.UseHypervisor.Value = true;
             Multiplayer.LanInterfaceId.Value = "0";
             Multiplayer.Mode.Value = MultiplayerMode.Disabled;
@@ -282,6 +294,7 @@ namespace Ryujinx.Ava.Utilities.Configuration
                         ButtonZl = Key.Q,
                         ButtonSl = Key.Unbound,
                         ButtonSr = Key.Unbound,
+                        ButtonCapture = Key.Unbound,
                     },
                     LeftJoyconStick = new JoyconConfigKeyboardStick<Key>
                     {
@@ -302,6 +315,7 @@ namespace Ryujinx.Ava.Utilities.Configuration
                         ButtonZr = Key.O,
                         ButtonSl = Key.Unbound,
                         ButtonSr = Key.Unbound,
+                        ButtonHome = Key.Unbound,
                     },
                     RightJoyconStick = new JoyconConfigKeyboardStick<Key>
                     {

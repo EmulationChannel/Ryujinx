@@ -13,6 +13,7 @@ using LibHac.Tools.FsSystem.NcaUtils;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using ApplicationId = LibHac.ApplicationId;
 using Path = System.IO.Path;
 
 namespace Ryujinx.HLE.HOS.Services.Fs.FileSystemProxy

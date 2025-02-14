@@ -390,6 +390,36 @@ namespace Ryujinx.Ava.Utilities.Configuration
             /// </summary>
             public ReactiveObject<bool> UseHypervisor { get; private set; }
 
+            /// <summary>
+            /// Launches missing applets as real apps
+            /// </summary>
+            public ReactiveObject<bool> MissingAppletsAsReal { get; private set; }
+            
+            /// <summary>
+            /// Launches the SoftwareKeyboard as a real applet
+            /// </summary>
+            public ReactiveObject<bool> SoftwareKeyboardIsReal { get; set; }        
+            
+            /// <summary>
+            /// Launches the Browser as a real applet
+            /// </summary>
+            public ReactiveObject<bool> BrowserIsReal { get; set; }        
+            
+            /// <summary>
+            /// Launches the Controller as a real applet
+            /// </summary>
+            public ReactiveObject<bool> ControllerIsReal { get; set; }        
+            
+            /// <summary>
+            /// Launches the PlayerSelect as a real applet
+            /// </summary>
+            public ReactiveObject<bool> PlayerSelectIsReal { get; set; }        
+            
+            /// <summary>
+            /// Launches the Cabinet as a real applet
+            /// </summary>
+            public ReactiveObject<bool> CabinetIsReal { get; set; }
+
             public SystemSection()
             {
                 Language = new ReactiveObject<Language>();
@@ -430,6 +460,19 @@ namespace Ryujinx.Ava.Utilities.Configuration
                 AudioVolume.LogChangesToValue(nameof(AudioVolume));
                 UseHypervisor = new ReactiveObject<bool>();
                 UseHypervisor.LogChangesToValue(nameof(UseHypervisor));
+                
+                MissingAppletsAsReal = new ReactiveObject<bool>();
+                MissingAppletsAsReal.LogChangesToValue(nameof(MissingAppletsAsReal));
+                SoftwareKeyboardIsReal = new ReactiveObject<bool>();
+                SoftwareKeyboardIsReal.LogChangesToValue(nameof(SoftwareKeyboardIsReal));
+                BrowserIsReal = new ReactiveObject<bool>();
+                BrowserIsReal.LogChangesToValue(nameof(BrowserIsReal));
+                ControllerIsReal = new ReactiveObject<bool>();
+                ControllerIsReal.LogChangesToValue(nameof(ControllerIsReal));
+                PlayerSelectIsReal = new ReactiveObject<bool>();
+                PlayerSelectIsReal.LogChangesToValue(nameof(PlayerSelectIsReal));
+                CabinetIsReal = new ReactiveObject<bool>();
+                CabinetIsReal.LogChangesToValue(nameof(CabinetIsReal));
             }
         }
 
