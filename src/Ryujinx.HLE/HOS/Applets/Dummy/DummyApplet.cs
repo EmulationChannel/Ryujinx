@@ -19,6 +19,7 @@ namespace Ryujinx.HLE.HOS.Applets.Dummy
         
         public ResultCode Start(AppletSession normalSession, AppletSession interactiveSession)
         {
+            _system.Device.UIHandler.DisplayMissingAppletDialog();
             _normalSession = normalSession;
             _normalSession.Push(BuildResponse());
             AppletStateChanged?.Invoke(this, null);

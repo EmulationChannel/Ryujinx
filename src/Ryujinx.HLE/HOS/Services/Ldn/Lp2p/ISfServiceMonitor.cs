@@ -1,6 +1,8 @@
 using Ryujinx.Common.Logging;
+using Ryujinx.Common.Utilities;
 using Ryujinx.HLE.HOS.Ipc;
 using Ryujinx.HLE.HOS.Kernel.Threading;
+using Ryujinx.HLE.HOS.Services.Ldn.Types;
 using Ryujinx.Horizon.Common;
 using System;
 
@@ -47,7 +49,8 @@ namespace Ryujinx.HLE.HOS.Services.Ldn.Lp2p
         public ResultCode GetGroupInfo(ServiceCtx context)
         {
             Logger.Stub?.PrintStub(LogClass.ServiceLdn);
-
+            GroupInfo info = new();
+            context.Memory.Write(context.Response.ReceiveBuff[0].Position,SpanHelpers.AsByteSpan(ref info).ToArray());
             return ResultCode.Success;
         }
 

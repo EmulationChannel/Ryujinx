@@ -195,6 +195,12 @@ namespace Ryujinx.Ava.UI.ViewModels
         public bool EnableInternetAccess { get; set; }
         public bool EnableFsIntegrityChecks { get; set; }
         public bool IgnoreMissingServices { get; set; }
+        public bool MissingAppletsAsReal { get; set; }
+        public bool SoftwareKeyboardIsReal { get; set; }        
+        public bool BrowserIsReal { get; set; }        
+        public bool ControllerIsReal { get; set; }        
+        public bool PlayerSelectIsReal { get; set; }        
+        public bool CabinetIsReal { get; set; }
         public MemoryConfiguration DramSize { get; set; }
         public bool EnableShaderCache { get; set; }
         public bool EnableTextureRecompression { get; set; }
@@ -527,6 +533,14 @@ namespace Ryujinx.Ava.UI.ViewModels
             DramSize = config.System.DramSize;
             IgnoreMissingServices = config.System.IgnoreMissingServices;
             IgnoreApplet = config.System.IgnoreControllerApplet;
+            
+            // Real
+            MissingAppletsAsReal = config.System.MissingAppletsAsReal;
+            SoftwareKeyboardIsReal = config.System.SoftwareKeyboardIsReal;
+            BrowserIsReal = config.System.BrowserIsReal;
+            ControllerIsReal = config.System.ControllerIsReal;
+            PlayerSelectIsReal = config.System.PlayerSelectIsReal;
+            CabinetIsReal = config.System.CabinetIsReal;
 
             // CPU
             EnablePptc = config.System.EnablePtc;
@@ -630,6 +644,14 @@ namespace Ryujinx.Ava.UI.ViewModels
             config.System.DramSize.Value = DramSize;
             config.System.IgnoreMissingServices.Value = IgnoreMissingServices;
             config.System.IgnoreControllerApplet.Value = IgnoreApplet;
+            
+            // Real
+            config.System.MissingAppletsAsReal.Value = MissingAppletsAsReal;
+            config.System.SoftwareKeyboardIsReal.Value = SoftwareKeyboardIsReal;
+            config.System.BrowserIsReal.Value = BrowserIsReal;
+            config.System.ControllerIsReal.Value = ControllerIsReal;
+            config.System.PlayerSelectIsReal.Value = PlayerSelectIsReal;
+            config.System.CabinetIsReal.Value = CabinetIsReal;
 
             // CPU
             config.System.EnablePtc.Value = EnablePptc;

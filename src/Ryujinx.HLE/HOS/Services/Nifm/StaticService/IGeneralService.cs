@@ -1,6 +1,7 @@
 using Ryujinx.Common;
 using Ryujinx.Common.Logging;
 using Ryujinx.Common.Utilities;
+using Ryujinx.HLE.FileSystem;
 using Ryujinx.HLE.HOS.Services.Nifm.StaticService.GeneralService;
 using Ryujinx.HLE.HOS.Services.Nifm.StaticService.Types;
 using System;
@@ -16,6 +17,8 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
         private IPInterfaceProperties _targetPropertiesCache = null;
         private UnicastIPAddressInformation _targetAddressInfoCache = null;
         private string _cacheChosenInterface = null;
+
+        private readonly UInt128 _interfaceId = UInt128Utils.CreateRandom();
 
         public IGeneralService()
         {
@@ -39,6 +42,17 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
             context.Response.PtrBuff[0] = context.Response.PtrBuff[0].WithSize(sizeof(int));
 
             context.Memory.Write(position, _generalServiceDetail.ClientId);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(2)]
+        // CreateScanRequest() -> object<nn::nifm::detail::IScanRequest>
+        public ResultCode CreateScanRequest(ServiceCtx context)
+        {
+            MakeObject(context, new IScanRequest(context.Device.System));
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
 
             return ResultCode.Success;
         }
@@ -78,7 +92,7 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
 
             NetworkProfileData networkProfile = new()
             {
-                Uuid = Random.Shared.NextUInt128(),
+                Uuid = _interfaceId,
             };
 
             networkProfile.IpSettingData.IpAddressSetting = new IpAddressSetting(interfaceProperties, unicastAddress);
@@ -87,6 +101,111 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
             "RyujinxNetwork"u8.CopyTo(networkProfile.Name.AsSpan());
 
             context.Memory.Write(networkProfileDataPosition, networkProfile);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(6)]
+        // EnumerateNetworkInterfaces() -> (u32, buffer<nn::nifm::detail::sf::NetworkInterfaceInfo, 0xa>)
+        public ResultCode EnumerateNetworkInterfaces(ServiceCtx context)
+        {
+            context.ResponseData.Write(1); // account crashes if we don't have at least one interface
+
+            // TODO: write interface info
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(7)]
+        // EnumerateNetworkProfiles() -> (u32, buffer<nn::nifm::detail::sf::NetworkProfileBasicInfo[], 0x6>)
+        public ResultCode EnumerateNetworkProfiles(ServiceCtx context)
+        {
+            context.ResponseData.Write(0);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(8)]
+        // GetNetworkProfile(nn::util::Uuid) -> buffer<nn::nifm::detail::sf::NetworkProfileData, 0x1a>
+        public ResultCode GetNetworkProfile(ServiceCtx context)
+        {
+            ulong networkProfileDataPosition = context.Request.RecvListBuff[0].Position;
+            UInt128 uuid = context.RequestData.ReadStruct<UInt128>();
+
+            if (uuid != _interfaceId)
+            {
+                return ResultCode.NoInternetConnection;
+            }
+
+            (IPInterfaceProperties interfaceProperties, UnicastIPAddressInformation unicastAddress) = GetLocalInterface(context);
+
+            if (interfaceProperties == null || unicastAddress == null)
+            {
+                return ResultCode.NoInternetConnection;
+            }
+
+            Logger.Info?.Print(LogClass.ServiceNifm, $"Console's local IP is \"{unicastAddress.Address}\".");
+
+            context.Response.PtrBuff[0] = context.Response.PtrBuff[0].WithSize((uint)Unsafe.SizeOf<NetworkProfileData>());
+
+            NetworkProfileData networkProfile = new()
+            {
+                Uuid = _interfaceId,
+            };
+
+            networkProfile.IpSettingData.IpAddressSetting = new IpAddressSetting(interfaceProperties, unicastAddress);
+            networkProfile.IpSettingData.DnsSetting = new DnsSetting(interfaceProperties);
+
+            "RyujinxNetwork"u8.CopyTo(networkProfile.Name.AsSpan());
+
+            context.Memory.Write(networkProfileDataPosition, networkProfile);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(9)]
+        // SetNetworkProfile(buffer<nn::nifm::detail::sf::NetworkProfileData, 0x19>)
+        public ResultCode SetNetworkProfile(ServiceCtx context)
+        {
+            ulong networkProfileDataPosition = context.Request.PtrBuff[0].Position;
+
+            NetworkProfileData networkProfile = context.Memory.Read<NetworkProfileData>(networkProfileDataPosition);
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm, new { networkProfile });
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(10)]
+        // RemoveNetworkProfile(nn::util::Uuid)
+        public ResultCode RemoveNetworkProfile(ServiceCtx context)
+        {
+            UInt128 uuid = context.RequestData.ReadStruct<UInt128>();
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm, new { uuid });
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(11)]
+        // GetScanData(u32) -> (u32, buffer<nn::nifm::detail::sf::AccessPointData, 0xa>)
+        public ResultCode GetScanData(ServiceCtx context)
+        {
+            SystemVersion version = context.Device.System.ContentManager.GetCurrentFirmwareVersion();
+            if (version.Major >= 4)
+            {
+                // TODO: write AccessPointData
+            }
+            else
+            {
+                // TOO: write AccessPointDataOld
+            }
+
+            context.ResponseData.Write(0);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
 
             return ResultCode.Success;
         }
@@ -109,6 +228,24 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
             return ResultCode.Success;
         }
 
+        [CommandCmif(14)]
+        // CreateTemporaryNetworkProfile(buffer<nn::nifm::detail::sf::NetworkProfileData, 0x19>) -> (nn::util::Uuid, object<nn::nifm::detail::INetworkProfile>)
+        public ResultCode CreateTemporaryNetworkProfile(ServiceCtx context)
+        {
+            ulong networkProfileDataPosition = context.Request.PtrBuff[0].Position;
+
+            NetworkProfileData networkProfile = context.Memory.Read<NetworkProfileData>(networkProfileDataPosition);
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm, new { networkProfile });
+
+            var uuid = UInt128Utils.CreateRandom();
+            var networkProfileObject = new INetworkProfile(uuid, networkProfile);
+
+            context.ResponseData.WriteStruct(uuid);
+            MakeObject(context, networkProfileObject);
+
+            return ResultCode.Success;
+        }
+
         [CommandCmif(15)]
         // GetCurrentIpConfigInfo() -> (nn::nifm::IpAddressSetting, nn::nifm::DnsSetting)
         public ResultCode GetCurrentIpConfigInfo(ServiceCtx context)
@@ -124,6 +261,17 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
 
             context.ResponseData.WriteStruct(new IpAddressSetting(interfaceProperties, unicastAddress));
             context.ResponseData.WriteStruct(new DnsSetting(interfaceProperties));
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(17)]
+        // IsWirelessCommunicationEnabled() -> b8
+        public ResultCode IsWirelessCommunicationEnabled(ServiceCtx context)
+        {
+            context.ResponseData.Write(true);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
 
             return ResultCode.Success;
         }
@@ -165,6 +313,38 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
             return ResultCode.Success;
         }
 
+        [CommandCmif(26)]
+        // SetExclusiveClient(buffer<nn::nifm::ClientId, 0x19, 4>)
+        public ResultCode SetExclusiveClient(ServiceCtx context)
+        {
+            ulong position = context.Request.PtrBuff[0].Position;
+#pragma warning disable IDE0059 // Remove unnecessary value assignment
+            ulong size = context.Request.PtrBuff[0].Size;
+#pragma warning restore IDE0059
+
+            int clientId = context.Memory.Read<int>(position);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(33)]
+        // ConfirmSystemAvailability()
+        public ResultCode ConfirmSystemAvailability(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(36)] // [4.0.0+]
+        // GetCurrentAccessPoint()
+        public ResultCode GetCurrentAccessPoint(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceNifm);
+            return ResultCode.Success;
+        }
+        
         private (IPInterfaceProperties, UnicastIPAddressInformation) GetLocalInterface(ServiceCtx context)
         {
             if (!NetworkInterface.GetIsNetworkAvailable())
@@ -198,7 +378,8 @@ namespace Ryujinx.HLE.HOS.Services.Nifm.StaticService
             {
                 NetworkChange.NetworkAddressChanged -= LocalInterfaceCacheHandler;
 
-                GeneralServiceManager.Remove(_generalServiceDetail.ClientId);
+                if (_generalServiceDetail.ClientId < GeneralServiceManager.Count)
+                    GeneralServiceManager.Remove(_generalServiceDetail.ClientId);
             }
         }
     }

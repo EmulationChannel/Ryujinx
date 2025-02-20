@@ -1595,6 +1595,8 @@ namespace Ryujinx.Ava.UI.ViewModels
 
                 return;
             }
+            
+            AppHost.Device.System.SetupFirst(AppHost.Device.Processes.ActiveApplication.ProgramId,AppHost.Device.Processes.ActiveApplication.ProcessId);
 
             CanUpdate = false;
 

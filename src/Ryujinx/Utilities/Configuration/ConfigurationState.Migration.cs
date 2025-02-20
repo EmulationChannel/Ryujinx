@@ -103,6 +103,13 @@ namespace Ryujinx.Ava.Utilities.Configuration
             System.IgnoreControllerApplet.Value = cff.IgnoreApplet;
             System.UseHypervisor.Value = cff.UseHypervisor;
             
+            System.MissingAppletsAsReal.Value = cff.MissingAppletsAsReal;
+            System.SoftwareKeyboardIsReal.Value = cff.SoftwareKeyboardIsReal;
+            System.BrowserIsReal.Value = cff.BrowserIsReal;
+            System.ControllerIsReal.Value = cff.ControllerIsReal;
+            System.PlayerSelectIsReal.Value = cff.PlayerSelectIsReal;
+            System.CabinetIsReal.Value = cff.CabinetIsReal;
+            
             UI.GuiColumns.FavColumn.Value = cff.GuiColumns.FavColumn;
             UI.GuiColumns.IconColumn.Value = cff.GuiColumns.IconColumn;
             UI.GuiColumns.AppColumn.Value = cff.GuiColumns.AppColumn;
@@ -227,6 +234,7 @@ namespace Ryujinx.Ava.Utilities.Configuration
                                 ButtonZl = Key.Q,
                                 ButtonSl = Key.Unbound,
                                 ButtonSr = Key.Unbound,
+                                ButtonCapture = Key.Unbound,
                             },
                             LeftJoyconStick = new JoyconConfigKeyboardStick<Key>
                             {
@@ -247,6 +255,7 @@ namespace Ryujinx.Ava.Utilities.Configuration
                                 ButtonZr = Key.O,
                                 ButtonSl = Key.Unbound,
                                 ButtonSr = Key.Unbound,
+                                ButtonHome = Key.Unbound,
                             },
                             RightJoyconStick = new JoyconConfigKeyboardStick<Key>
                             {
@@ -418,6 +427,7 @@ namespace Ryujinx.Ava.Utilities.Configuration
                     // This was accidentally enabled by default when it was PRed. That is not what we want,
                     // so as a compromise users who want to use it will simply need to re-enable it once after updating.
                     cff.IgnoreApplet = false;
+                    cff.MissingAppletsAsReal = false;
                 }),
                 (60, static cff => cff.StartNoUI = false),
                 (61, static cff =>

@@ -1,4 +1,5 @@
 using Ryujinx.Horizon.Common;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Ryujinx.HLE.HOS.Kernel.Memory
@@ -12,6 +13,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
         public ulong EndAddr => Address + Size;
 
         private readonly ushort[] _pageReferenceCounts;
+        public Dictionary<ulong, List<KPageList>> Regions { get; } = new Dictionary<ulong, List<KPageList>>();
 
         public KMemoryRegionManager(ulong address, ulong size, ulong endAddr)
         {
@@ -25,7 +27,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             _pageHeap.UpdateUsedSize();
         }
 
-        public Result AllocatePages(out KPageList pageList, ulong pagesCount)
+        public Result AllocatePages(out KPageList pageList, ulong pagesCount, ulong pid)
         {
             if (pagesCount == 0)
             {
@@ -36,7 +38,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
 
             lock (_pageHeap)
             {
-                Result result = AllocatePagesImpl(out pageList, pagesCount, false);
+                Result result = AllocatePagesImpl(out pageList, pagesCount, false, pid);
 
                 if (result == Result.Success)
                 {
@@ -71,7 +73,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             }
         }
 
-        private Result AllocatePagesImpl(out KPageList pageList, ulong pagesCount, bool random)
+        private Result AllocatePagesImpl(out KPageList pageList, ulong pagesCount, bool random, ulong pid)
         {
             pageList = new KPageList();
 
@@ -109,6 +111,15 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
                 }
             }
 
+            if (Regions.ContainsKey(pid))
+            {
+                Regions[pid].Add(pageList);
+            }
+            else
+            {
+                Regions.Add(pid, new List<KPageList>() { pageList });
+            }
+
             if (pagesCount != 0)
             {
                 FreePages(pageList);
@@ -116,7 +127,20 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
                 return KernelResult.OutOfMemory;
             }
 
+            
             return Result.Success;
+        }
+
+        public void ClearFromPid(ulong pid)
+        {
+            if (Regions.TryGetValue(pid, out List<KPageList> pageLists))
+            {
+                foreach (KPageList pageList in pageLists)
+                {
+                    FreePages(pageList);
+                }
+                Regions.Remove(pid);
+            }
         }
 
         private ulong AllocatePagesContiguousImpl(ulong pagesCount, ulong alignPages, bool random)

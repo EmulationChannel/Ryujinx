@@ -15,20 +15,33 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         // GetAppletResourceUserId() -> nn::applet::AppletResourceUserId
         public ResultCode GetAppletResourceUserId(ServiceCtx context)
         {
-            long appletResourceUserId = context.Device.System.AppletState.AppletResourceUserIds.Add(_pid);
+            ulong appletResourceUserId = _pid;
 
             context.ResponseData.Write(appletResourceUserId);
-
-            Logger.Stub?.PrintStub(LogClass.ServiceAm, new { appletResourceUserId });
 
             return ResultCode.Success;
         }
 
+        [CommandCmif(2)]
+        // GetAppletResourceUserIdOfCallerApplet() -> nn::applet::AppletResourceUserId
+        public ResultCode GetAppletResourceUserIdOfCallerApplet(ServiceCtx context)
+        {
+            ulong appletResourceUserId = 0x0100000000001000;
+            if (context.Device.System.WindowSystem.GetApplicationApplet() != null)
+            {
+                appletResourceUserId = context.Device.System.WindowSystem.GetApplicationApplet().ProcessHandle.TitleId;
+            }
+            context.ResponseData.Write(appletResourceUserId);
+            Logger.Stub?.PrintStub(LogClass.ServiceAm, new { appletResourceUserId });
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(10)]
         // AcquireForegroundRights()
         public ResultCode AcquireForegroundRights(ServiceCtx context)
         {
             Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            context.Device.System.WindowSystem.PauseOldWindows(_pid);
 
             return ResultCode.Success;
         }

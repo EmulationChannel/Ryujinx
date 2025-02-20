@@ -1,3 +1,5 @@
+using Ryujinx.Common.Logging;
+
 namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
 {
     class IManagerForSystemService : IpcService
@@ -42,6 +44,14 @@ namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
         public ResultCode LoadIdTokenCache(ServiceCtx context)
         {
             return _managerServer.LoadIdTokenCache(context);
+        }
+        
+        [CommandCmif(143)]
+        // GetNetworkServiceLicenseCacheEx()
+        public ResultCode GetNetworkServiceLicenseCacheEx(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceAcc);
+            return ResultCode.Success;
         }
     }
 }

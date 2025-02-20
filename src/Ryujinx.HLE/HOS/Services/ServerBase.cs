@@ -58,6 +58,9 @@ namespace Ryujinx.HLE.HOS.Services
         public ManualResetEvent InitDone { get; }
         public string Name { get; }
         public Func<IpcService> SmObjectFactory { get; }
+        
+        internal KProcess SelfProcess => _selfProcess;
+        internal KThread SelfThread => _selfThread;
 
         public ServerBase(KernelContext context, string name, Func<IpcService> smObjectFactory = null)
         {
@@ -172,6 +175,15 @@ namespace Ryujinx.HLE.HOS.Services
         {
             ServerLoop();
         }
+        
+        protected virtual ulong CalculateRequiredHeapSize()
+        {
+            return 0UL;
+        }
+
+        protected virtual void CustomInit(KernelContext context, ulong pid, ulong heapAddress)
+        {
+        }
 
         private void ServerLoop()
         {
@@ -187,7 +199,7 @@ namespace Ryujinx.HLE.HOS.Services
 
             if (SmObjectFactory != null)
             {
-                _context.Syscall.ManageNamedPort(out int serverPortHandle, "sm:", 50);
+                _context.Syscall.ManageNamedPort(out int serverPortHandle, "sm:", 50).AbortOnFailure();
 
                 AddPort(serverPortHandle, SmObjectFactory);
             }
@@ -196,10 +208,14 @@ namespace Ryujinx.HLE.HOS.Services
             Result result = _selfProcess.HandleTable.GenerateHandle(_wakeEvent.ReadableEvent, out _wakeHandle);
 
             InitDone.Set();
+            
+            ulong heapSize = CalculateRequiredHeapSize() + PointerBufferSize;
 
             ulong messagePtr = _selfThread.TlsAddress;
-            _context.Syscall.SetHeapSize(out ulong heapAddr, 0x200000);
-
+            _context.Syscall.SetHeapSize(out ulong heapAddr, BitUtils.AlignUp(heapSize, 0x200000UL));
+            
+            CustomInit(_context, _selfProcess.Pid, heapAddr + PointerBufferSize);
+            
             _selfProcess.CpuMemory.Write(messagePtr + 0x0, 0);
             _selfProcess.CpuMemory.Write(messagePtr + 0x4, 2 << 10);
             _selfProcess.CpuMemory.Write(messagePtr + 0x8, heapAddr | ((ulong)PointerBufferSize << 48));
@@ -288,9 +304,13 @@ namespace Ryujinx.HLE.HOS.Services
                             _wakeEvent.WritableEvent.Clear();
                         }
                     }
-                    else if (rc == KernelResult.PortRemoteClosed && signaledIndex >= 0 && SmObjectFactory != null)
+                    else if (rc == KernelResult.PortRemoteClosed && signaledIndex >= 0/* && SmObjectFactory != null*/)
                     {
                         DestroySession(handles[signaledIndex]);
+                    }
+                    else
+                    {
+                        Logger.Warning?.Print(LogClass.Service, $"ReplyAndReceive failed with unknown result: {rc}");
                     }
 
                     _selfProcess.CpuMemory.Write(messagePtr + 0x0, 0);

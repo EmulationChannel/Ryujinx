@@ -1,3 +1,5 @@
+using Ryujinx.Common.Logging;
+
 namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
 {
     class IProfileEditor : IpcService
@@ -35,6 +37,14 @@ namespace Ryujinx.HLE.HOS.Services.Account.Acc.AccountService
         public ResultCode LoadImage(ServiceCtx context)
         {
             return _profileServer.LoadImage(context);
+        }
+        
+        [CommandCmif(30)]
+        // GetImageId()
+        public ResultCode GetImageId(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            return ResultCode.Success;
         }
 
         [CommandCmif(100)]

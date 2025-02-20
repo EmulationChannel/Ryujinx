@@ -39,6 +39,7 @@ namespace Ryujinx.Common.Logging
         ServiceFs,
         ServiceHid,
         ServiceIrs,
+        ServiceLbl,
         ServiceLdn,
         ServiceLdr,
         ServiceLm,
@@ -50,11 +51,14 @@ namespace Ryujinx.Common.Logging
         ServiceNgct,
         ServiceNifm,
         ServiceNim,
+        ServiceNotif,
         ServiceNs,
         ServiceNsd,
         ServiceNtc,
         ServiceNv,
+        ServiceNpns,
         ServiceOlsc,
+        ServiceOvln,
         ServicePctl,
         ServicePcv,
         ServicePl,
@@ -72,6 +76,6 @@ namespace Ryujinx.Common.Logging
         TamperMachine,
         UI,
         Vic,
-        XCIFileTrimmer
+        XCIFileTrimmer,
     }
 }

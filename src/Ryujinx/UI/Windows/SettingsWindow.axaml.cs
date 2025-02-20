@@ -4,6 +4,7 @@ using Avalonia.Input;
 using FluentAvalonia.UI.Controls;
 using Ryujinx.Ava.Common.Locale;
 using Ryujinx.Ava.UI.ViewModels;
+using Ryujinx.Ava.UI.Views.Settings;
 using Ryujinx.HLE.FileSystem;
 using Ryujinx.Input;
 using System;
@@ -93,6 +94,9 @@ namespace Ryujinx.Ava.UI.Windows
                         break;
                     case nameof(LoggingPage):
                         NavPanel.Content = LoggingPage;
+                        break;
+                    case nameof(RealAppletsPage):
+                        NavPanel.Content = RealAppletsPage;
                         break;
                     case nameof(HacksPage):
                         HacksPage.DataContext = ViewModel;

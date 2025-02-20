@@ -86,7 +86,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
 
         private IProcessContextFactory _contextFactory;
         public IProcessContext Context { get; private set; }
-        public IVirtualMemoryManager CpuMemory => Context.AddressSpace;
+        public IVirtualMemoryManagerTracked CpuMemory => Context.AddressSpace;
 
         public HleProcessDebugger Debugger { get; private set; }
 
@@ -268,7 +268,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
                 codeAddress,
                 codePagesCount,
                 MemoryState.CodeStatic,
-                KMemoryPermission.None);
+                KMemoryPermission.None, Pid);
 
             if (result != Result.Success)
             {
@@ -437,7 +437,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
                 regionPagesCount,
                 MemoryState.ThreadLocal,
                 KMemoryPermission.ReadAndWrite,
-                out ulong tlsPageVa);
+                out ulong tlsPageVa,Pid);
 
             if (result != Result.Success)
             {
@@ -607,7 +607,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
                         regionPagesCount,
                         MemoryState.Stack,
                         KMemoryPermission.ReadAndWrite,
-                        out ulong stackBottom);
+                        out ulong stackBottom,Pid);
 
                     if (result != Result.Success)
                     {
@@ -872,6 +872,11 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
 
         public Result Terminate()
         {
+            if (Switch.Shared.System.WindowSystem.GetByAruId(Pid) != null)
+            {
+                Logger.Info?.Print(LogClass.Service, $"Attempting to terminate a running application window system for PID {Pid}");
+                MemoryManager.GetMemoryRegionManager().ClearFromPid(Pid);
+            }
             Result result;
 
             bool shallTerminate = false;
@@ -1174,6 +1179,11 @@ namespace Ryujinx.HLE.HOS.Kernel.Process
         public bool IsSvcPermitted(int svcId)
         {
             return Capabilities.IsSvcPermitted(svcId);
+        }
+
+        public bool IsRunning()
+        {
+            return State == ProcessState.Started || State == ProcessState.Attached || State == ProcessState.DebugSuspended;
         }
     }
 }

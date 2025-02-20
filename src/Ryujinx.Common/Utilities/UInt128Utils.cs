@@ -16,5 +16,10 @@ namespace Ryujinx.Common.Utilities
 
         public static UInt128 NextUInt128(this Random rand) =>
             new((ulong)rand.NextInt64(), (ulong)rand.NextInt64());
+
+        public static UInt128 CreateRandom()
+        {
+            return new UInt128((ulong)Random.Shared.NextInt64(), (ulong)Random.Shared.NextInt64());
+        }
     }
 }

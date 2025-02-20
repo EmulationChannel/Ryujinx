@@ -74,7 +74,7 @@ namespace Ryujinx.HLE.HOS.Applets.Error
             return ((resultCode & 0x1FF) + 2000, (resultCode >> 9) & 0x3FFF);
         }
 
-        private static string SystemLanguageToLanguageKey(SystemLanguage systemLanguage)
+        public static string SystemLanguageToLanguageKey(SystemLanguage systemLanguage)
         {
             return systemLanguage switch
             {

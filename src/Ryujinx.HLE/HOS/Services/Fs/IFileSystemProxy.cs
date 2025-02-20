@@ -8,15 +8,20 @@ using LibHac.FsSystem;
 using LibHac.Ncm;
 using LibHac.Sf;
 using LibHac.Spl;
+using LibHac.Tools.Fs;
 using LibHac.Tools.FsSystem;
 using LibHac.Tools.FsSystem.NcaUtils;
 using Ryujinx.Common;
 using Ryujinx.Common.Logging;
 using Ryujinx.HLE.HOS.Services.Fs.FileSystemProxy;
+using Ryujinx.HLE.HOS.Services.Ns.Types;
+using Ryujinx.HLE.HOS.Services.Pcv;
+using Ryujinx.HLE.Loaders.Processes;
 using Ryujinx.Memory;
 using System;
 using System.IO;
 using static Ryujinx.HLE.Utilities.StringUtils;
+using ApplicationId = LibHac.ApplicationId;
 using GameCardHandle = System.UInt32;
 using IFile = Ryujinx.HLE.HOS.Services.Fs.FileSystemProxy.IFile;
 using IFileSystem = LibHac.FsSrv.Sf.IFileSystem;
@@ -43,6 +48,105 @@ namespace Ryujinx.HLE.HOS.Services.Fs
             _pid = context.Request.HandleDesc.PId;
 
             return ResultCode.Success;
+        }
+        
+        [CommandCmif(7)] // 2.0.0+
+        // OpenFileSystemWithPatch(nn::fssrv::sf::FileSystemType filesystem_type, nn::ApplicationId tid) -> object<nn::fssrv::sf::IFileSystem> contentFs
+        public ResultCode OpenFileSystemWithPatch(ServiceCtx context)
+        {
+            // TODO: Find out why the title id read from here is incorrect.
+            FileSystemType fileSystemType = (FileSystemType)context.RequestData.ReadInt32();
+            ulong titleId = 0x0100000000001000;
+            if (context.Device.System.WindowSystem.GetApplicationApplet() != null)
+            {
+                titleId = context.Device.System.WindowSystem.GetApplicationApplet().ProcessHandle.TitleId;
+            }
+            Logger.Info?.Print(LogClass.ServiceAm, $" { titleId}  {fileSystemType} ");
+            string switchPath = string.Empty;
+            Logger.Stub?.PrintStub(LogClass.ServiceFs);
+            foreach (RyuApplicationData ryuApplicationData in context.Device.Configuration.Titles)
+            {
+                if (titleId == ryuApplicationData.AppId.Value)
+                {
+                    switchPath = ryuApplicationData.Path;
+                    break;
+                }
+            }
+
+            if (switchPath == string.Empty)
+            {
+                return ResultCode.PathDoesNotExist;
+            }
+            string fullPath = FileSystem.VirtualFileSystem.SwitchPathToSystemPath(switchPath);
+            if (fullPath == null)
+            {
+                fullPath = switchPath;
+            }
+            FileStream fileStream = new(fullPath, FileMode.Open, FileAccess.Read);
+            string extension = System.IO.Path.GetExtension(fullPath);
+
+            if (fileSystemType == FileSystemType.ContentManual)
+            {
+                if (extension == ".xci")
+                {
+                    ResultCode result = FileSystemProxyHelper.OpenXciHtml(context, titleId, context.Device,fileStream.AsStorage(), out FileSystemProxy.IFileSystem fileSystem);
+
+                    if (result == ResultCode.Success)
+                    {
+                        MakeObject(context, fileSystem);
+                    }
+
+                    return result;
+                }
+                else if (extension == ".nsp")
+                {
+                    ResultCode result = FileSystemProxyHelper.OpenNspHtml(context, fullPath, titleId, context.Device,fileStream.AsStorage(), out FileSystemProxy.IFileSystem fileSystem);
+
+                    if (result == ResultCode.Success)
+                    {
+                        MakeObject(context, fileSystem);
+                    }
+
+                    return result;
+                }
+                else
+                {
+                    ResultCode result = FileSystemProxyHelper.OpenNcaHtml(context, fullPath, titleId, context.Device,fileStream.AsStorage(), out FileSystemProxy.IFileSystem fileSystem);
+
+                    if (result == ResultCode.Success)
+                    {
+                        MakeObject(context, fileSystem);
+                    }
+
+                    return result;
+                }
+            }
+            else
+            {
+                if (extension == ".nca")
+                {
+                    ResultCode result = FileSystemProxyHelper.OpenNcaFs(context, fullPath, fileStream.AsStorage(), out FileSystemProxy.IFileSystem fileSystem);
+
+                    if (result == ResultCode.Success)
+                    {
+                        MakeObject(context, fileSystem);
+                    }
+
+                    return result;
+                }
+                else if (extension == ".nsp")
+                {
+                    ResultCode result = FileSystemProxyHelper.OpenNsp(context, fullPath, out FileSystemProxy.IFileSystem fileSystem);
+
+                    if (result == ResultCode.Success)
+                    {
+                        MakeObject(context, fileSystem);
+                    }
+
+                    return result;
+                }
+            }
+            return ResultCode.InvalidInput;
         }
 
         [CommandCmif(8)]
@@ -673,6 +777,14 @@ namespace Ryujinx.HLE.HOS.Services.Fs
             }
 
             MakeObject(context, new IFile(ref file.Ref));
+
+            return ResultCode.Success;
+        }
+        [CommandCmif(83)]
+        // OpenSaveDataTransferProhibiter(u64) -> nn::fssrv::sf::ISaveDataTransferProhibiter
+        public ResultCode OpenSaveDataTransferProhibiter(ServiceCtx context)
+        {
+            MakeObject(context, new IPcvService(context));
 
             return ResultCode.Success;
         }

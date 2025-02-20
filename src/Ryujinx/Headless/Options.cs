@@ -150,6 +150,24 @@ namespace Ryujinx.Headless
             if (NeedsOverride(nameof(IgnoreControllerApplet)))
                 IgnoreControllerApplet = configurationState.System.IgnoreControllerApplet;
             
+            if (NeedsOverride(nameof(MissingAppletsAsReal)))
+                MissingAppletsAsReal = configurationState.System.MissingAppletsAsReal;
+            
+            if (NeedsOverride(nameof(SoftwareKeyboardIsReal)))
+                SoftwareKeyboardIsReal = configurationState.System.SoftwareKeyboardIsReal;
+            
+            if (NeedsOverride(nameof(BrowserIsReal)))
+                BrowserIsReal = configurationState.System.BrowserIsReal;
+            
+            if (NeedsOverride(nameof(ControllerIsReal)))
+                ControllerIsReal = configurationState.System.ControllerIsReal; 
+            
+            if (NeedsOverride(nameof(PlayerSelectIsReal)))
+                PlayerSelectIsReal = configurationState.System.PlayerSelectIsReal;
+            
+            if (NeedsOverride(nameof(CabinetIsReal)))
+                CabinetIsReal = configurationState.System.CabinetIsReal;
+            
             return;
             
             bool NeedsOverride(string argKey) => originalArgs.None(arg => arg.TrimStart('-').EqualsIgnoreCase(OptionName(argKey)));
@@ -411,8 +429,26 @@ namespace Ryujinx.Headless
         public bool IgnoreMissingServices { get; set; }
         
         [Option("ignore-controller-applet", Required = false, Default = false, HelpText = "Enable ignoring the controller applet when your game loses connection to your controller.")]
-        public bool IgnoreControllerApplet { get; set; }
-
+        public bool IgnoreControllerApplet { get; set; }        
+        
+        [Option("missing-applets-as-real", Required = false, Default = false, HelpText = "Runs the missing applets as real applets.")]
+        public bool MissingAppletsAsReal { get; set; }
+        
+        [Option("is-softwarekeyboard-real", Required = false, Default = false, HelpText = "Runs the software keyboard applets as real")]
+        public bool SoftwareKeyboardIsReal { get; set; }        
+        
+        [Option("is-browser-real", Required = false, Default = false, HelpText = "Runs the browser applets as real")]
+        public bool BrowserIsReal { get; set; }        
+        
+        [Option("is-controller-real", Required = false, Default = false, HelpText = "Runs the controller applets as real")]
+        public bool ControllerIsReal { get; set; }        
+        
+        [Option("is-playerselect-real", Required = false, Default = false, HelpText = "Runs the player select applets as real")]
+        public bool PlayerSelectIsReal { get; set; }        
+        
+        [Option("is-cabinet-real", Required = false, Default = false, HelpText = "Runs the cabinet applets as real")]
+        public bool CabinetIsReal { get; set; }
+        
         // Values
 
         [Value(0, MetaName = "input", HelpText = "Input to load.", Required = true)]

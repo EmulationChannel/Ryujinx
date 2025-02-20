@@ -1,3 +1,4 @@
+using Ryujinx.Common.Logging;
 using Ryujinx.Horizon.Common;
 using Ryujinx.Horizon.Sdk.Lbl;
 using Ryujinx.Horizon.Sdk.Sf;
@@ -8,7 +9,43 @@ namespace Ryujinx.Horizon.Lbl.Ipc
     {
         private bool _vrModeEnabled;
         private float _currentBrightnessSettingForVrMode;
+        
+        [CmifCommand(0)]
+        // SaveCurrentSetting()
+        public Result SaveCurrentSetting()
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceLbl);
+            
+            return Result.Success;
+        }
+        
+        [CmifCommand(1)]
+        // LoadCurrentSetting()
+        public Result LoadCurrentSetting()
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceLbl);
+            
+            return Result.Success;
+        }
+        
+        [CmifCommand(3)]
+        // GetCurrentBrightnessSetting()
+        public Result GetCurrentBrightnessSetting()
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceLbl);
+            
+            return Result.Success;
+        }
 
+        [CmifCommand(14)]
+        // IsAutoBrightnessControlEnabled()
+        public Result IsAutoBrightnessControlEnabled()
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceLbl);
+            
+            return Result.Success;
+        }
+        
         [CmifCommand(17)]
         public Result SetBrightnessReflectionDelayLevel(float unknown0, float unknown1)
         {
@@ -124,6 +161,15 @@ namespace Ryujinx.Horizon.Lbl.Ipc
         {
             vrModeEnabled = _vrModeEnabled;
 
+            return Result.Success;
+        }
+        
+        [CmifCommand(29)]
+        // IsAutoBrightnessControlSupported()
+        public Result IsAutoBrightnessControlSupported()
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceLbl);
+            
             return Result.Success;
         }
     }

@@ -13,7 +13,9 @@ namespace Ryujinx.Horizon.Sdk.Sf.Hipc
         {
             PointerBufferSize = pointerBufferSize;
             MaxDomains = maxDomains;
-            MaxDomainObjects = maxDomainObjects;
+            // TODO: Implement domain objects removal before enabling this.
+            // MaxDomainObjects = maxDomainObjects;
+            MaxDomainObjects = 256;
             CanDeferInvokeRequest = canDeferInvokeRequest;
         }
     }

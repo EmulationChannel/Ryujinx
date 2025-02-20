@@ -523,7 +523,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             ulong regionPagesCount,
             MemoryState state,
             KMemoryPermission permission,
-            out ulong address)
+            out ulong address, ulong pid)
         {
             address = 0;
 
@@ -561,7 +561,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
                 }
                 else
                 {
-                    result = AllocateAndMapPages(address, pagesCount, permission);
+                    result = AllocateAndMapPages(address, pagesCount, permission, pid);
                 }
 
                 if (result != Result.Success)
@@ -575,7 +575,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             return Result.Success;
         }
 
-        public Result MapPages(ulong address, ulong pagesCount, MemoryState state, KMemoryPermission permission)
+        public Result MapPages(ulong address, ulong pagesCount, MemoryState state, KMemoryPermission permission, ulong pid)
         {
             ulong size = pagesCount * PageSize;
 
@@ -596,7 +596,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
                     return KernelResult.OutOfResource;
                 }
 
-                Result result = AllocateAndMapPages(address, pagesCount, permission);
+                Result result = AllocateAndMapPages(address, pagesCount, permission,pid);
 
                 if (result == Result.Success)
                 {
@@ -607,11 +607,11 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             }
         }
 
-        private Result AllocateAndMapPages(ulong address, ulong pagesCount, KMemoryPermission permission)
+        private Result AllocateAndMapPages(ulong address, ulong pagesCount, KMemoryPermission permission, ulong pid)
         {
             KMemoryRegionManager region = GetMemoryRegionManager();
 
-            Result result = region.AllocatePages(out KPageList pageList, pagesCount);
+            Result result = region.AllocatePages(out KPageList pageList, pagesCount,pid);
 
             if (result != Result.Success)
             {
@@ -738,7 +738,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             }
         }
 
-        public Result SetHeapSize(ulong size, out ulong address)
+        public Result SetHeapSize(ulong size, out ulong address, ulong pid)
         {
             address = 0;
 
@@ -768,7 +768,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
 
                     KMemoryRegionManager region = GetMemoryRegionManager();
 
-                    Result result = region.AllocatePages(out KPageList pageList, pagesCount);
+                    Result result = region.AllocatePages(out KPageList pageList, pagesCount, pid);
 
                     using OnScopeExit _ = new(() => pageList.DecrementPagesReferenceCount(Context.MemoryManager));
 
@@ -1305,7 +1305,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             }
         }
 
-        public Result MapPhysicalMemory(ulong address, ulong size)
+        public Result MapPhysicalMemory(ulong address, ulong size, ulong pid)
         {
             ulong endAddr = address + size;
 
@@ -1340,7 +1340,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
 
                 KMemoryRegionManager region = GetMemoryRegionManager();
 
-                Result result = region.AllocatePages(out KPageList pageList, remainingPages);
+                Result result = region.AllocatePages(out KPageList pageList, remainingPages, pid);
 
                 using OnScopeExit _ = new(() => pageList.DecrementPagesReferenceCount(Context.MemoryManager));
 
@@ -2884,7 +2884,7 @@ namespace Ryujinx.HLE.HOS.Kernel.Memory
             return pa - DramMemoryMap.DramBase;
         }
 
-        protected KMemoryRegionManager GetMemoryRegionManager()
+        public KMemoryRegionManager GetMemoryRegionManager()
         {
             return Context.MemoryManager.MemoryRegions[(int)_memRegion];
         }

@@ -1,3 +1,4 @@
+using LibHac.Util;
 using Ryujinx.Common.Logging;
 using Ryujinx.HLE.HOS.Ipc;
 using Ryujinx.HLE.HOS.Kernel.Threading;
@@ -8,20 +9,56 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
 {
     class IHomeMenuFunctions : IpcService
     {
-        private readonly KEvent _channelEvent;
         private int _channelEventHandle;
 
         public IHomeMenuFunctions(Horizon system)
         {
-            // TODO: Signal this Event somewhere in future.
-            _channelEvent = new KEvent(system.KernelContext);
         }
 
         [CommandCmif(10)]
         // RequestToGetForeground()
         public ResultCode RequestToGetForeground(ServiceCtx context)
         {
-            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            // Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            context.Device.System.WindowSystem.RequestHomeMenuToGetForeground();
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(11)]
+        // LockForeground()
+        public ResultCode LockForeground(ServiceCtx context)
+        {
+            // Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            context.Device.System.WindowSystem.RequestLockHomeMenuIntoForeground();
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(12)]
+        // UnlockForeground()
+        public ResultCode UnlockForeground(ServiceCtx context)
+        {
+            // Logger.Stub?.PrintStub(LogClass.ServiceAm);
+            context.Device.System.WindowSystem.RequestUnlockHomeMenuFromForeground();
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(20)]
+        // PopFromGeneralChannel() -> object<nn::am::service::IStorage>
+        public ResultCode PopFromGeneralChannel(ServiceCtx context)
+        {
+            bool pop = context.Device.System.GeneralChannelData.TryDequeue(out byte[] data);
+            if (!pop)
+            {
+                return ResultCode.NotAvailable;
+            }
+
+            // Logger.Debug?.Print(LogClass.ServiceAm, $"Data size: {data.Length}");
+            Logger.Info?.Print(LogClass.ServiceAm, $"GeneralChannel data: {data.ToHexString()}");
+
+            MakeObject(context, new IStorage(data));
 
             return ResultCode.Success;
         }
@@ -32,13 +69,29 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
         {
             if (_channelEventHandle == 0)
             {
-                if (context.Process.HandleTable.GenerateHandle(_channelEvent.ReadableEvent, out _channelEventHandle) != Result.Success)
+                if (context.Process.HandleTable.GenerateHandle(
+                    context.Device.System.GeneralChannelEvent.ReadableEvent,
+                    out _channelEventHandle) != Result.Success)
                 {
                     throw new InvalidOperationException("Out of handles!");
                 }
             }
 
             context.Response.HandleDesc = IpcHandleDesc.MakeCopy(_channelEventHandle);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceAm);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(31)]
+        [CommandCmif(32)]
+        // GetWriterLockAccessorEx(i32) -> object<nn::am::service::ILockAccessor>
+        public ResultCode GetWriterLockAccessorEx(ServiceCtx context)
+        {
+            int lockId = context.RequestData.ReadInt32();
+
+            MakeObject(context, new ILockAccessor(lockId, context.Device.System));
 
             Logger.Stub?.PrintStub(LogClass.ServiceAm);
 

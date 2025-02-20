@@ -4,5 +4,6 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.Sys
     {
         InFocus = 1,
         OutOfFocus = 2,
+        Background = 3,
     }
 }

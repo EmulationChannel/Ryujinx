@@ -35,6 +35,9 @@ namespace Ryujinx.Input
 
         Guide,
         Misc1,
+        
+        Home = Guide,
+        Capture = Misc1,
 
         // Xbox Elite paddle
         Paddle1,

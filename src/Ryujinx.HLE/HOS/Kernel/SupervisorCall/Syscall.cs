@@ -897,7 +897,7 @@ namespace Ryujinx.HLE.HOS.Kernel.SupervisorCall
 
             KProcess process = KernelStatic.GetCurrentProcess();
 
-            return process.MemoryManager.SetHeapSize(size, out address);
+            return process.MemoryManager.SetHeapSize(size, out address, process.Pid);
         }
 
         [Svc(2)]
@@ -1364,7 +1364,7 @@ namespace Ryujinx.HLE.HOS.Kernel.SupervisorCall
 
             KProcess process = KernelStatic.GetCurrentProcess();
 
-            return process.MemoryManager.MapPhysicalMemory(address, size);
+            return process.MemoryManager.MapPhysicalMemory(address, size, process.Pid);
         }
 
         [Svc(0x2d)]

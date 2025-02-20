@@ -5,14 +5,21 @@ using LibHac.Fs;
 using LibHac.FsSrv.Impl;
 using LibHac.FsSrv.Sf;
 using LibHac.FsSystem;
+using LibHac.Ncm;
 using LibHac.Spl;
 using LibHac.Tools.Es;
 using LibHac.Tools.Fs;
 using LibHac.Tools.FsSystem;
 using LibHac.Tools.FsSystem.NcaUtils;
+using Ryujinx.HLE.FileSystem;
+using Ryujinx.HLE.Loaders.Processes;
+using Ryujinx.HLE.Loaders.Processes.Extensions;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using ApplicationId = LibHac.ApplicationId;
+using ContentType = LibHac.Fs.ContentType;
 using Path = System.IO.Path;
 
 namespace Ryujinx.HLE.HOS.Services.Fs.FileSystemProxy
@@ -71,6 +78,172 @@ namespace Ryujinx.HLE.HOS.Services.Fs.FileSystemProxy
 
             return ResultCode.Success;
         }
+        
+        public static ResultCode OpenXciHtml(ServiceCtx context, ulong applicationId, Switch device, LibHac.Fs.IStorage ncaStorage, out IFileSystem openedFileSystem)
+        {
+            openedFileSystem = null;
+
+            try
+            {
+                Xci xci = new(context.Device.System.KeySet, ncaStorage);
+
+                if (!xci.HasPartition(XciPartitionType.Secure))
+                {
+                    return ResultCode.PartitionNotFound;
+                }
+
+                var partitionFileSystem = xci.OpenPartition(XciPartitionType.Secure);
+                
+                Nca nca = null;
+
+                try
+                {
+                    Dictionary<ulong, ContentMetaData> applications = partitionFileSystem.GetContentData(ContentMetaType.Application, device.FileSystem, device.System.FsIntegrityCheckLevel);
+
+                    if (applicationId == 0)
+                    {
+                        foreach ((ulong _, ContentMetaData content) in applications)
+                        {
+                            nca = content.GetNcaByType(device.FileSystem.KeySet, LibHac.Ncm.ContentType.HtmlDocument, device.Configuration.UserChannelPersistence.Index);
+                            break;
+                        }
+                    }
+                    else if (applications.TryGetValue(applicationId, out ContentMetaData content))
+                    {
+                        nca = content.GetNcaByType(device.FileSystem.KeySet, LibHac.Ncm.ContentType.HtmlDocument, device.Configuration.UserChannelPersistence.Index);
+                    }
+
+                    ProcessLoaderHelper.RegisterProgramMapInfo(device, partitionFileSystem).ThrowIfFailure();
+                }
+                catch (Exception ex)
+                {
+                    return ResultCode.InvalidInput;
+                }
+            
+                LibHac.Fs.Fsa.IFileSystem fileSystem = nca.OpenFileSystem(NcaSectionType.Data, context.Device.System.FsIntegrityCheckLevel);
+                using SharedRef<LibHac.Fs.Fsa.IFileSystem> sharedFs = new(fileSystem);
+
+                using SharedRef<LibHac.FsSrv.Sf.IFileSystem> adapter = FileSystemInterfaceAdapter.CreateShared(ref sharedFs.Ref, true);
+
+                openedFileSystem = new IFileSystem(ref adapter.Ref);
+                return ResultCode.Success;
+                
+            }
+            catch (HorizonResultException ex)
+            {
+                return (ResultCode)ex.ResultValue.Value;
+            }
+        }
+        
+        public static ResultCode OpenNspHtml(ServiceCtx context, string nspPath, ulong applicationId, Switch device, LibHac.Fs.IStorage ncaStorage, out IFileSystem openedFileSystem)
+        {
+            openedFileSystem = null;
+
+            try
+            {
+                LocalStorage storage = new(nspPath, FileAccess.Read, FileMode.Open);
+                PartitionFileSystem pfs = new();
+                using SharedRef<LibHac.Fs.Fsa.IFileSystem> nsp = new(pfs);
+                pfs.Initialize(storage).ThrowIfFailure();
+
+                ImportTitleKeysFromNsp(nsp.Get, context.Device.System.KeySet);
+                Nca nca = null;
+
+                try
+                {
+                    Dictionary<ulong, ContentMetaData> applications = nsp.Get.GetContentData(ContentMetaType.Application, device.FileSystem, device.System.FsIntegrityCheckLevel);
+
+                    if (applicationId == 0)
+                    {
+                        foreach ((ulong _, ContentMetaData content) in applications)
+                        {
+                            nca = content.GetNcaByType(device.FileSystem.KeySet, LibHac.Ncm.ContentType.HtmlDocument, device.Configuration.UserChannelPersistence.Index);
+                            break;
+                        }
+                    }
+                    else if (applications.TryGetValue(applicationId, out ContentMetaData content))
+                    {
+                        nca = content.GetNcaByType(device.FileSystem.KeySet, LibHac.Ncm.ContentType.HtmlDocument, device.Configuration.UserChannelPersistence.Index);
+                    }
+
+                    ProcessLoaderHelper.RegisterProgramMapInfo(device, nsp.Get).ThrowIfFailure();
+                }
+                catch (Exception ex)
+                {
+                    return ResultCode.InvalidInput;
+                }
+            
+                LibHac.Fs.Fsa.IFileSystem fileSystem = nca.OpenFileSystem(NcaSectionType.Data, context.Device.System.FsIntegrityCheckLevel);
+                using SharedRef<LibHac.Fs.Fsa.IFileSystem> sharedFs = new(fileSystem);
+
+                using SharedRef<LibHac.FsSrv.Sf.IFileSystem> adapter = FileSystemInterfaceAdapter.CreateShared(ref sharedFs.Ref, true);
+
+                openedFileSystem = new IFileSystem(ref adapter.Ref);
+                return ResultCode.Success;
+                
+            }
+            catch (HorizonResultException ex)
+            {
+                return (ResultCode)ex.ResultValue.Value;
+            }
+        }
+        
+        public static ResultCode OpenNcaHtml(ServiceCtx context, string nspPath, ulong applicationId, Switch device, LibHac.Fs.IStorage ncaStorage, out IFileSystem openedFileSystem)
+        {
+            openedFileSystem = null;
+
+            try
+            {
+                Nca ncaApp = new(context.Device.System.KeySet, ncaStorage);
+
+                if (!ncaApp.SectionExists(NcaSectionType.Data))
+                {
+                    return ResultCode.PartitionNotFound;
+                }
+
+                LibHac.Fs.Fsa.IFileSystem fileSystemB = ncaApp.OpenFileSystem(NcaSectionType.Data, context.Device.System.FsIntegrityCheckLevel);
+                
+                Nca nca = null;
+
+                try
+                {
+                    Dictionary<ulong, ContentMetaData> applications = fileSystemB.GetContentData(ContentMetaType.Application, device.FileSystem, device.System.FsIntegrityCheckLevel);
+
+                    if (applicationId == 0)
+                    {
+                        foreach ((ulong _, ContentMetaData content) in applications)
+                        {
+                            nca = content.GetNcaByType(device.FileSystem.KeySet, LibHac.Ncm.ContentType.HtmlDocument, device.Configuration.UserChannelPersistence.Index);
+                            break;
+                        }
+                    }
+                    else if (applications.TryGetValue(applicationId, out ContentMetaData content))
+                    {
+                        nca = content.GetNcaByType(device.FileSystem.KeySet, LibHac.Ncm.ContentType.HtmlDocument, device.Configuration.UserChannelPersistence.Index);
+                    }
+
+                    ProcessLoaderHelper.RegisterProgramMapInfo(device, fileSystemB).ThrowIfFailure();
+                }
+                catch (Exception ex)
+                {
+                    return ResultCode.InvalidInput;
+                }
+            
+                LibHac.Fs.Fsa.IFileSystem fileSystem = nca.OpenFileSystem(NcaSectionType.Data, context.Device.System.FsIntegrityCheckLevel);
+                using SharedRef<LibHac.Fs.Fsa.IFileSystem> sharedFs = new(fileSystem);
+
+                using SharedRef<LibHac.FsSrv.Sf.IFileSystem> adapter = FileSystemInterfaceAdapter.CreateShared(ref sharedFs.Ref, true);
+
+                openedFileSystem = new IFileSystem(ref adapter.Ref);
+                return ResultCode.Success;
+                
+            }
+            catch (HorizonResultException ex)
+            {
+                return (ResultCode)ex.ResultValue.Value;
+            }
+        }
+        
 
         public static ResultCode OpenFileSystemFromInternalFile(ServiceCtx context, string fullPath, out IFileSystem openedFileSystem)
         {

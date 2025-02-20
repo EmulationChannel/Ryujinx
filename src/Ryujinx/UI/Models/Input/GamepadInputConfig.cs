@@ -43,7 +43,9 @@ namespace Ryujinx.Ava.UI.Models.Input
         [ObservableProperty] private GamepadInputId _dpadRight;
 
         [ObservableProperty] private GamepadInputId _buttonMinus;
-        [ObservableProperty] private GamepadInputId _buttonPlus;
+        [ObservableProperty] private GamepadInputId _buttonPlus;        
+        [ObservableProperty] private GamepadInputId _buttonCapture;
+        [ObservableProperty] private GamepadInputId _buttonHome;
         
         [ObservableProperty] private GamepadInputId _buttonA;
         [ObservableProperty] private GamepadInputId _buttonB;
@@ -140,6 +142,7 @@ namespace Ryujinx.Ava.UI.Models.Input
                 LeftButtonSl = controllerInput.LeftJoycon.ButtonSl;
                 LeftButtonSr = controllerInput.LeftJoycon.ButtonSr;
                 ButtonZl = controllerInput.LeftJoycon.ButtonZl;
+                ButtonCapture = controllerInput.LeftJoycon.ButtonCapture;
 
                 ButtonA = controllerInput.RightJoycon.ButtonA;
                 ButtonB = controllerInput.RightJoycon.ButtonB;
@@ -150,6 +153,7 @@ namespace Ryujinx.Ava.UI.Models.Input
                 RightButtonSl = controllerInput.RightJoycon.ButtonSl;
                 RightButtonSr = controllerInput.RightJoycon.ButtonSr;
                 ButtonZr = controllerInput.RightJoycon.ButtonZr;
+                ButtonHome = controllerInput.RightJoycon.ButtonHome;
 
                 DeadzoneLeft = controllerInput.DeadzoneLeft;
                 DeadzoneRight = controllerInput.DeadzoneRight;
@@ -215,6 +219,7 @@ namespace Ryujinx.Ava.UI.Models.Input
                     ButtonSl = LeftButtonSl,
                     ButtonSr = LeftButtonSr,
                     ButtonZl = ButtonZl,
+                    ButtonCapture = ButtonCapture,
                 },
                 RightJoycon = new RightJoyconCommonConfig<GamepadInputId>
                 {
@@ -227,6 +232,7 @@ namespace Ryujinx.Ava.UI.Models.Input
                     ButtonSr = RightButtonSr,
                     ButtonR = ButtonR,
                     ButtonZr = ButtonZr,
+                    ButtonHome = ButtonHome,
                 },
                 LeftJoyconStick = new JoyconConfigControllerStick<GamepadInputId, StickInputId>
                 {

@@ -40,13 +40,16 @@ using Ryujinx.HLE;
 using Ryujinx.HLE.FileSystem;
 using Ryujinx.HLE.HOS;
 using Ryujinx.HLE.HOS.Services.Account.Acc;
+using Ryujinx.HLE.HOS.Services.Ns.Types;
 using Ryujinx.HLE.HOS.SystemState;
+using Ryujinx.HLE.Loaders.Processes;
 using Ryujinx.Input;
 using Ryujinx.Input.HLE;
 using SkiaSharp;
 using SPB.Graphics.Vulkan;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -54,6 +57,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using static Ryujinx.Ava.UI.Helpers.Win32NativeInterop;
 using AntiAliasing = Ryujinx.Common.Configuration.AntiAliasing;
+using ApplicationId = LibHac.ApplicationId;
 using InputManager = Ryujinx.Input.HLE.InputManager;
 using IRenderer = Ryujinx.Graphics.GAL.IRenderer;
 using Key = Ryujinx.Input.Key;
@@ -124,6 +128,7 @@ namespace Ryujinx.Ava
 
         private bool _dialogShown;
         private readonly bool _isFirmwareTitle;
+        private List<RyuApplicationData> _titles = new();
 
         private readonly Lock _lockObject = new();
 
@@ -141,6 +146,8 @@ namespace Ryujinx.Ava
         public string ApplicationPath { get; private set; }
         public ulong ApplicationId { get; private set; }
         public bool ScreenshotRequested { get; set; }
+        
+        public IImmutableList<RyuApplicationData> Titles { get => _titles.ToImmutableList(); }
 
         public AppHost(
             RendererHost renderer,
@@ -673,6 +680,8 @@ namespace Ryujinx.Ava
             
             InitEmulatedSwitch();
             MainWindow.UpdateGraphicsConfig();
+            Device.LoadSystemProgramId(0x010000000000100C, out ProcessResult process);
+            Device.System.WindowSystem.TrackNewProcess(process.ProcessId,0,false);
 
             SystemVersion firmwareVersion = ContentManager.GetCurrentFirmwareVersion();
 
@@ -919,12 +928,19 @@ namespace Ryujinx.Ava
 
             // Initialize Configuration.
             MemoryConfiguration memoryConfiguration = ConfigurationState.Instance.System.DramSize.Value;
+            
+            _titles = new List<RyuApplicationData>();
+            foreach (ApplicationData App in _viewModel.Applications)
+            {
+                _titles.Add(new(new ApplicationId(App.Id),App.ControlHolder.Value,App.Path,App.Icon));
+            }
 
             Device = new Switch(new HLEConfiguration(
                 VirtualFileSystem,
                 _viewModel.LibHacHorizonManager,
                 ContentManager,
                 _accountManager,
+                Titles.ToImmutableList(),
                 _userChannelPersistence,
                 renderer,
                 InitializeAudio(),

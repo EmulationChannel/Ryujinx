@@ -172,5 +172,11 @@
   <ItemGroup>
     <Folder Include="Assets\Fonts\Mono\" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Update="UI\Views\Settings\SettingsRealApplets.axaml.cs">
+      <DependentUpon>SettingsRealApplets.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
 using LibHac;
+using LibHac.Account;
 using LibHac.Common;
 using LibHac.Fs;
 using LibHac.Fs.Fsa;
@@ -7,9 +8,15 @@ using LibHac.Ncm;
 using LibHac.Tools.FsSystem.NcaUtils;
 using Ryujinx.Common;
 using Ryujinx.Common.Logging;
+using Ryujinx.Common.Memory;
+using Ryujinx.HLE.HOS.Ipc;
+using Ryujinx.HLE.HOS.Services.Settings.Types;
+using Ryujinx.HLE.HOS.Services.Time.Clock;
 using Ryujinx.HLE.HOS.SystemState;
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Ryujinx.HLE.HOS.Services.Settings
@@ -85,12 +92,68 @@ namespace Ryujinx.HLE.HOS.Services.Settings
 
             return ResultCode.Success;
         }
+        
+        [CommandCmif(7)]
+        // GetLockScreenFlag() -> bool
+        public ResultCode GetLockScreenFlag(ServiceCtx context)
+        {
+            context.ResponseData.Write(false);
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+            return ResultCode.Success;
+        }
 
+        [CommandCmif(17)]
+        // GetAccountSettings() -> nn::settings::system::AccountSettings
+        public ResultCode GetAccountSettings(ServiceCtx context)
+        {
+            AccountSettings accountSettings = new AccountSettings
+            {
+                UserSelectorSettings = new UserSelectorSettings()
+            };
+            context.ResponseData.WriteStruct(accountSettings);
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(21)]
+        // GetEulaVersions() -> (u32, buffer<nn::settings::system::EulaVersion, 6>)
+        public ResultCode GetEulaVersions(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            ulong bufferPosition = context.Request.ReceiveBuff[0].Position;
+            ulong bufferLen = context.Request.ReceiveBuff[0].Size;
+
+            if ((ulong)Unsafe.SizeOf<EulaVersion>() > bufferLen)
+            {
+                return ResultCode.NullEULAVersionBuffer;
+            }
+            
+            var eulaVersion = new EulaVersion
+            {
+                Version = 0x10000,
+                RegionCode = context.Device.System.State.DesiredRegionCode,
+                ClockType = 1,
+                NetworkSystemClock = 0,
+                SteadyClock = new Time.Clock.SteadyClockTimePoint {
+                    TimePoint = 0xc,
+                    ClockSourceId = new UInt128(0x36a0328708bc18c1, 0x1608ea2b023284)
+                }
+            };
+
+            context.Memory.Write(bufferPosition, eulaVersion);
+
+            context.ResponseData.Write(1);
+
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(23)]
         // GetColorSetId() -> i32
         public ResultCode GetColorSetId(ServiceCtx context)
         {
-            context.ResponseData.Write((int)context.Device.System.State.ThemeColor);
+            bool isDarkMode = context.Device.UIHandler.IsDarkMode();
+            context.ResponseData.Write(isDarkMode ? 1 : 0);
 
             return ResultCode.Success;
         }
@@ -99,12 +162,51 @@ namespace Ryujinx.HLE.HOS.Services.Settings
         // GetColorSetId() -> i32
         public ResultCode SetColorSetId(ServiceCtx context)
         {
-            int colorSetId = context.RequestData.ReadInt32();
-
-            context.Device.System.State.ThemeColor = (ColorSet)colorSetId;
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
 
             return ResultCode.Success;
         }
+        
+        [CommandCmif(29)]
+        // GetNotificationSettings() -> nn::settings::system::NotificationSettings
+        public ResultCode GetNotificationSettings(ServiceCtx context)
+        {
+            NotificationSettings notificationSettings = new NotificationSettings
+            {
+                Flags = NotificationFlag.None,
+                Volume = NotificationVolume.Low,
+                HeadTime = new NotificationTime(),
+                TailTime = new NotificationTime()
+            };
+
+            context.ResponseData.WriteStruct(notificationSettings);
+
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(31)]
+        // GetAccountNotificationSettings() -> (u32, buffer<nn::settings::system::AccountNotificationSettings, 6>)
+        public ResultCode GetAccountNotificationSettings(ServiceCtx context)
+        {
+            var buffer = context.Request.ReceiveBuff[0];
+             
+            Span<AccountNotificationSettings> elementsSpan = CreateSpanFromBuffer<AccountNotificationSettings>(context,buffer,true);
+            elementsSpan[0] = new AccountNotificationSettings
+            {
+                Uid = new Array16<byte>(),
+                Flags = 0x1F,
+                FriendPresenceOverlayPermission = 0x1,
+                FriendInvitationOverlayPermission = 0x1,
+                Reserved1 = 0,
+                Reserved2 = 0
+            };
+            int count = elementsSpan.Length;
+            Logger.Info?.PrintStub(LogClass.ServiceSet, $"AccountNotificationSettings: {count} settings found");
+            context.ResponseData.Write(1);
+            WriteSpanToBuffer(context, buffer, elementsSpan);
+            return ResultCode.Success;
+        }
+
 
         [CommandCmif(37)]
         // GetSettingsItemValueSize(buffer<nn::settings::SettingsName, 0x19>, buffer<nn::settings::SettingsItemKey, 0x19>) -> u64
@@ -221,6 +323,29 @@ namespace Ryujinx.HLE.HOS.Services.Settings
             return ResultCode.Success;
         }
 
+        [CommandCmif(39)]
+        // GetTvSettings() -> nn::settings::system::TvSettings
+        public ResultCode GetTvSettings(ServiceCtx context)
+        {
+            TvSettings tvSettings = new();
+
+            context.ResponseData.WriteStruct(tvSettings);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(47)]
+        // GetQuestFlag() -> bool
+        public ResultCode GetQuestFlag(ServiceCtx context)
+        {
+            // NOTE: Gets a flag determining whether the console is a kiosk unit (codenamed "Quest"). Used by qlaunch to determine whether to launch Retail Interactive Display Menu. 
+            context.ResponseData.Write(false);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(60)]
         // IsUserSystemClockAutomaticCorrectionEnabled() -> bool
         public ResultCode IsUserSystemClockAutomaticCorrectionEnabled(ServiceCtx context)
@@ -244,15 +369,50 @@ namespace Ryujinx.HLE.HOS.Services.Settings
             return ResultCode.Success;
         }
 
+        [CommandCmif(63)]
+        // GetPrimaryAlbumStorage() -> s32
+        public ResultCode GetPrimaryAlbumStorage(ServiceCtx context)
+        {
+            context.ResponseData.Write((byte)PrimaryAlbumStorage.Nand);
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+            return ResultCode.Success;
+        }
+
         [CommandCmif(68)]
         // GetSerialNumber() -> buffer<nn::settings::system::SerialNumber, 0x16>
         public ResultCode GetSerialNumber(ServiceCtx context)
         {
             context.ResponseData.Write(Encoding.ASCII.GetBytes("RYU00000000000"));
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(71)]
+        // GetSleepSettings() -> SleepSettings
+        public ResultCode GetSleepSettings(ServiceCtx context)
+        {
+            SleepSettings sleepSettings = new();
+
+            context.ResponseData.WriteStruct(sleepSettings);
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(75)]
+        // GetInitialLaunchSettings() -> nn::settings::system::InitialLaunchSettings
+        public ResultCode GetInitialLaunchSettings(ServiceCtx context)
+        {
+            InitialLaunchSettings launchSettings = new InitialLaunchSettings();
+            launchSettings.Flags |= InitialLaunchFlag.InitialLaunchCompletionFlag;
+            launchSettings.Flags |= InitialLaunchFlag.InitialLaunchUserAdditionFlag;
+            launchSettings.Flags |= InitialLaunchFlag.InitialLaunchTimestampFlag;
+            
+            context.ResponseData.WriteStruct(launchSettings);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
 
             return ResultCode.Success;
         }
-
+        
         [CommandCmif(77)]
         // GetDeviceNickName() -> buffer<nn::settings::system::DeviceNickName, 0x16>
         public ResultCode GetDeviceNickName(ServiceCtx context)
@@ -290,7 +450,18 @@ namespace Ryujinx.HLE.HOS.Services.Settings
 
             return ResultCode.Success;
         }
+        
+        [CommandCmif(79)]
+        // GetProductModel() -> s32
+        public ResultCode GetProductModel(ServiceCtx context)
+        {
+            context.ResponseData.Write(1);
 
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+        
         [CommandCmif(90)]
         // GetMiiAuthorId() -> nn::util::Uuid
         public ResultCode GetMiiAuthorId(ServiceCtx context)
@@ -302,7 +473,112 @@ namespace Ryujinx.HLE.HOS.Services.Settings
 
             return ResultCode.Success;
         }
+        
+        [CommandCmif(95)]
+        // GetAutoUpdateEnableFlag() -> bool
+        public ResultCode GetAutoUpdateEnableFlag(ServiceCtx context)
+        {
+            context.ResponseData.Write(false);
 
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(99)]
+        // GetBatteryPercentageFlag() -> u8
+        public ResultCode GetBatteryPercentageFlag(ServiceCtx context)
+        {
+            context.ResponseData.Write(100);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(120)] // [3.0.0+] 
+        // GetPushNotificationActivityModeOnSleep()
+        public ResultCode GetPushNotificationActivityModeOnSleep(ServiceCtx context)
+        {
+            context.ResponseData.Write(false);
+            
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(124)]
+        // GetErrorReportSharePermission() -> s32
+        public ResultCode GetErrorReportSharePermission(ServiceCtx context)
+        {
+            context.ResponseData.Write(1);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(126)]
+        // GetAppletLaunchFlags() -> u32
+        public ResultCode GetAppletLaunchFlags(ServiceCtx context)
+        {
+            // NOTE: I do not know what this is used for but it is used by qlaunch.
+            context.ResponseData.Write(0);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(136)]
+        // GetKeyboardLayout() -> s32
+        public ResultCode GetKeyboardLayout(ServiceCtx context)
+        {
+            context.ResponseData.Write((int)KeyboardLayout.Default);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(170)]
+        // GetChineseTraditionalInputMethod() -> s32
+        public ResultCode GetChineseTraditionalInputMethod(ServiceCtx context)
+        {
+            context.ResponseData.Write(0);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(183)]
+        // GetPlatformRegion() -> s32
+        public ResultCode GetPlatformRegion(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+            context.ResponseData.Write(0);
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(201)]
+        // GetFieldTestingFlag() -> bool
+        public ResultCode GetFieldTestingFlag(ServiceCtx context)
+        {
+            context.ResponseData.Write(false);
+
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+
+            return ResultCode.Success;
+        }
+        
+        [CommandCmif(203)]
+        // GetPanelCrcMode()
+        public ResultCode GetPanelCrcMode(ServiceCtx context)
+        {
+            Logger.Stub?.PrintStub(LogClass.ServiceSet);
+            return ResultCode.Success;
+        }
+        
         public byte[] GetFirmwareData(Switch device)
         {
             const ulong SystemVersionTitleId = 0x0100000000000809;

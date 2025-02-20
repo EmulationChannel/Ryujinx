@@ -1,6 +1,7 @@
 using Ryujinx.HLE.HOS.Applets;
 using Ryujinx.HLE.HOS.Services.Account.Acc;
 using Ryujinx.HLE.HOS.Services.Am.AppletOE.ApplicationProxyService.ApplicationProxy.Types;
+using Ryujinx.Horizon.Sdk.Applet;
 
 namespace Ryujinx.HLE.UI
 {
@@ -68,5 +69,20 @@ namespace Ryujinx.HLE.UI
         /// Displays the player select dialog and returns the selected profile.
         /// </summary>
         UserProfile ShowPlayerSelectDialog();
+
+        /// <summary>
+        /// Gets the UI theme and returns true if is dark mode.
+        /// </summary>
+        bool IsDarkMode();
+
+        /// <summary>
+        /// Gets weather or not the applet is real in the system
+        /// </summary>
+        bool IsAppletReal(RealAppletId appletId);
+
+        /// <summary>
+        /// Displays a dialog informing the user that the requested applet is missing implementation.
+        /// </summary>
+        void DisplayMissingAppletDialog();
     }
 }

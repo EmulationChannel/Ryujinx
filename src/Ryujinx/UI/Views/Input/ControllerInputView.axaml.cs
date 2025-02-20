@@ -184,6 +184,12 @@ namespace Ryujinx.Ava.UI.Views.Input
                                     case "RightJoystick":
                                         viewModel.Config.RightJoystick = buttonValue.AsHidType<StickInputId>();
                                         break;
+                                    case "ButtonCapture":
+                                        viewModel.Config.ButtonCapture = buttonValue.AsHidType<GamepadInputId>();
+                                        break;
+                                    case "ButtonHome":
+                                        viewModel.Config.ButtonHome = buttonValue.AsHidType<GamepadInputId>();
+                                        break;
                                 }
                             }
                         };

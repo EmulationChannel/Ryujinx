@@ -1,3 +1,5 @@
+using Ryujinx.Common.Logging;
+using Ryujinx.HLE.HOS.Applets;
 using Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.LibraryAppletProxy;
 using Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService.SystemAppletProxy;
 
@@ -6,17 +8,24 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService
     class ILibraryAppletProxy : IpcService
     {
         private readonly ulong _pid;
+        private readonly ServiceCtx _context;
 
-        public ILibraryAppletProxy(ulong pid)
+        public ILibraryAppletProxy(ServiceCtx context, ulong pid)
         {
+            _context = context;
             _pid = pid;
+        }
+
+        private RealApplet GetApplet()
+        {
+            return _context.Device.System.WindowSystem.GetByAruId(_pid);
         }
 
         [CommandCmif(0)]
         // GetCommonStateGetter() -> object<nn::am::service::ICommonStateGetter>
         public ResultCode GetCommonStateGetter(ServiceCtx context)
         {
-            MakeObject(context, new ICommonStateGetter(context));
+            MakeObject(context, new ICommonStateGetter(context, _pid));
 
             return ResultCode.Success;
         }
@@ -70,7 +79,7 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService
         // GetLibraryAppletCreator() -> object<nn::am::service::ILibraryAppletCreator>
         public ResultCode GetLibraryAppletCreator(ServiceCtx context)
         {
-            MakeObject(context, new ILibraryAppletCreator());
+            MakeObject(context, new ILibraryAppletCreator(context, _pid));
 
             return ResultCode.Success;
         }
@@ -79,8 +88,15 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService
         // OpenLibraryAppletSelfAccessor() -> object<nn::am::service::ILibraryAppletSelfAccessor>
         public ResultCode OpenLibraryAppletSelfAccessor(ServiceCtx context)
         {
-            MakeObject(context, new ILibraryAppletSelfAccessor(context));
-
+            if (context.Device.System.WindowSystem.IsLaunchedAsReal(_pid))
+            {
+                MakeObject(context, new ILibraryRealAppletSelfAccessor(context, _pid));
+            }
+            else
+            {
+                MakeObject(context, new ILibraryAppletSelfAccessor(context));
+            }
+            
             return ResultCode.Success;
         }
 
@@ -89,6 +105,24 @@ namespace Ryujinx.HLE.HOS.Services.Am.AppletAE.AllSystemAppletProxiesService
         public ResultCode GetAppletCommonFunctions(ServiceCtx context)
         {
             MakeObject(context, new IAppletCommonFunctions());
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(22)]
+        // GetHomeMenuFunctions() -> object<nn::am::service::IHomeMenuFunctions>
+        public ResultCode GetHomeMenuFunctions(ServiceCtx context)
+        {
+            MakeObject(context, new IHomeMenuFunctions(context.Device.System));
+
+            return ResultCode.Success;
+        }
+
+        [CommandCmif(23)]
+        // GetGlobalStateController() -> object<nn::am::service::IGlobalStateController>
+        public ResultCode GetGlobalStateController(ServiceCtx context)
+        {
+            MakeObject(context, new IGlobalStateController(context));
 
             return ResultCode.Success;
         }

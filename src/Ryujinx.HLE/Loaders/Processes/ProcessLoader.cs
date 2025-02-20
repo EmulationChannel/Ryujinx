@@ -31,8 +31,11 @@ namespace Ryujinx.HLE.Loaders.Processes
             get
             {
                 if (!_processesByPid.TryGetValue(_latestPid, out ProcessResult value))
-                    throw new RyujinxException(
-                        $"The HLE Process map did not have a process with ID {_latestPid}. Are you missing firmware?");
+                {
+                    return null;
+                }
+                    // throw new RyujinxException(
+                    //     $"The HLE Process map did not have a process with ID {_latestPid}. Are you missing firmware?");
                 
                 return value;
             }
@@ -57,6 +60,42 @@ namespace Ryujinx.HLE.Loaders.Processes
             }
 
             (bool success, ProcessResult processResult) = xci.OpenPartition(XciPartitionType.Secure).TryLoad(_device, path, applicationId, out string errorMessage);
+
+            if (!success)
+            {
+                Logger.Error?.Print(LogClass.Loader, errorMessage, nameof(PartitionFileSystemExtensions.TryLoad));
+
+                return false;
+            }
+
+            if (processResult.ProcessId != 0 && _processesByPid.TryAdd(processResult.ProcessId, processResult))
+            {
+                if (processResult.Start(_device))
+                {
+                    _latestPid = processResult.ProcessId;
+
+                    TitleIDs.CurrentApplication.Value = processResult.ProgramIdText;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        public bool LoadXci(string path, ulong applicationId, out ProcessResult processResult)
+        {
+            FileStream stream = new(path, FileMode.Open, FileAccess.Read);
+            Xci xci = new(_device.Configuration.VirtualFileSystem.KeySet, stream.AsStorage());
+
+            if (!xci.HasPartition(XciPartitionType.Secure))
+            {
+                Logger.Error?.Print(LogClass.Loader, "Unable to load XCI: Could not find XCI Secure partition");
+                processResult = null;
+                return false;
+            }
+
+            (bool success, processResult) = xci.OpenPartition(XciPartitionType.Secure).TryLoad(_device, path, applicationId, out string errorMessage);
 
             if (!success)
             {
@@ -113,6 +152,40 @@ namespace Ryujinx.HLE.Loaders.Processes
 
             return false;
         }
+        
+        public bool LoadNsp(string path, ulong applicationId, out ProcessResult processResult)
+        {
+            FileStream file = new(path, FileMode.Open, FileAccess.Read);
+            PartitionFileSystem partitionFileSystem = new();
+            partitionFileSystem.Initialize(file.AsStorage()).ThrowIfFailure();
+
+            (bool success, processResult) = partitionFileSystem.TryLoad(_device, path, applicationId, out string errorMessage);
+
+            if (processResult.ProcessId == 0)
+            {
+                // This is not a normal NSP, it's actually a ExeFS as a NSP
+                processResult = partitionFileSystem.Load(_device, new BlitStruct<ApplicationControlProperty>(1), partitionFileSystem.GetNpdm(), 0, true);
+            }
+
+            if (processResult.ProcessId != 0 && _processesByPid.TryAdd(processResult.ProcessId, processResult))
+            {
+                if (processResult.Start(_device))
+                {
+                    _latestPid = processResult.ProcessId;
+
+                    TitleIDs.CurrentApplication.Value = processResult.ProgramIdText;
+
+                    return true;
+                }
+            }
+
+            if (!success)
+            {
+                Logger.Error?.Print(LogClass.Loader, errorMessage, nameof(PartitionFileSystemExtensions.TryLoad));
+            }
+
+            return false;
+        }
 
         public bool LoadNca(string path, BlitStruct<ApplicationControlProperty>? customNacpData = null)
         {
@@ -120,6 +193,32 @@ namespace Ryujinx.HLE.Loaders.Processes
             Nca nca = new(_device.Configuration.VirtualFileSystem.KeySet, file.AsStorage(false));
 
             ProcessResult processResult = nca.Load(_device, null, null, customNacpData);
+
+            if (processResult.ProcessId != 0 && _processesByPid.TryAdd(processResult.ProcessId, processResult))
+            {
+                if (processResult.Start(_device))
+                {
+                    // NOTE: Check if process is SystemApplicationId or ApplicationId
+                    if (processResult.ProgramId > 0x01000000000007FF)
+                    {
+                        _latestPid = processResult.ProcessId;
+
+                        TitleIDs.CurrentApplication.Value = processResult.ProgramIdText;
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        public bool LoadNca(string path, out ProcessResult processResult)
+        {
+            FileStream file = new(path, FileMode.Open, FileAccess.Read);
+            Nca nca = new(_device.Configuration.VirtualFileSystem.KeySet, file.AsStorage(false));
+
+            processResult = nca.Load(_device, null, null, null);
 
             if (processResult.ProcessId != 0 && _processesByPid.TryAdd(processResult.ProcessId, processResult))
             {
@@ -265,6 +364,11 @@ namespace Ryujinx.HLE.Loaders.Processes
             }
 
             return false;
+        }
+
+        public void SetActivePID(ulong lastActivePid)
+        {
+            _latestPid = lastActivePid;
         }
     }
 }

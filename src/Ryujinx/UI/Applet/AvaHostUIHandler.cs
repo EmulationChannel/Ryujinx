@@ -15,6 +15,7 @@ using Ryujinx.HLE.HOS.Applets.SoftwareKeyboard;
 using Ryujinx.HLE.HOS.Services.Account.Acc;
 using Ryujinx.HLE.HOS.Services.Am.AppletOE.ApplicationProxyService.ApplicationProxy.Types;
 using Ryujinx.HLE.UI;
+using Ryujinx.Horizon.Sdk.Applet;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -322,6 +323,62 @@ namespace Ryujinx.Ava.UI.Applet
             }
 
             return profile;
+        }
+
+        public bool IsDarkMode()
+        {
+            return ConfigurationState.Instance.UI.BaseStyle.Value == "Dark";
+        }
+
+        public bool IsMissingAppletsAsReal()
+        {
+            return ConfigurationState.Instance.System.MissingAppletsAsReal;
+        }
+        
+        public bool IsAppletReal(RealAppletId appletId)
+        {
+            bool softwareKeyboardReal = ConfigurationState.Instance.System.SoftwareKeyboardIsReal;
+            bool browserReal = ConfigurationState.Instance.System.BrowserIsReal;
+            bool controllerReal = ConfigurationState.Instance.System.ControllerIsReal;
+            bool playerSelectReal = ConfigurationState.Instance.System.PlayerSelectIsReal;
+            bool cabinetReal = ConfigurationState.Instance.System.CabinetIsReal;
+            bool missingAppletsAsReal = ConfigurationState.Instance.System.MissingAppletsAsReal;
+
+            switch (appletId)
+            {
+                case RealAppletId.LibraryAppletSwkbd:
+                    return softwareKeyboardReal;
+                case RealAppletId.LibraryAppletWeb:
+                case RealAppletId.LibraryAppletOfflineWeb:
+                case RealAppletId.LibraryAppletOfflineWebFw17:
+                case RealAppletId.LibraryAppletOfflineWeb2Fw17:
+                case RealAppletId.LibraryAppletWifiWebAuth:
+                    return browserReal;
+                case RealAppletId.LibraryAppletController:
+                    return controllerReal;
+                case RealAppletId.LibraryAppletPlayerSelect:
+                    return playerSelectReal;
+                case RealAppletId.LibraryAppletCabinet:
+                    return cabinetReal;
+                default:
+                    return missingAppletsAsReal;
+            }
+        }
+
+        public void DisplayMissingAppletDialog()
+        {
+            string title = LocaleManager.Instance[LocaleKeys.RealMissingApplets];
+            string message = LocaleManager.Instance[LocaleKeys.ErrorMissingApplet];
+            string real = LocaleManager.Instance[LocaleKeys.RealReal];
+            string options = LocaleManager.Instance[LocaleKeys.MenuBarOptions].Trim('_');
+            message = message.Replace("{0}", title);
+            message = message.Replace("{1}", real);
+            string location = options + "->" +
+                              LocaleManager.Instance[LocaleKeys.Settings] + "->" +
+                              LocaleManager.Instance[LocaleKeys.SettingsTabRealApplets] + "->" +
+                              LocaleManager.Instance[LocaleKeys.RealMissingApplets];
+            message += location;
+            DisplayErrorAppletDialog(title, message, [LocaleManager.Instance[LocaleKeys.InputDialogOk]]);
         }
     }
 }

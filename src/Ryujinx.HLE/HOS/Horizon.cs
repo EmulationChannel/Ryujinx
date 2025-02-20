@@ -4,8 +4,10 @@ using LibHac.Fs;
 using LibHac.Fs.Shim;
 using LibHac.FsSystem;
 using LibHac.Tools.FsSystem;
+using Ryujinx.Common.Logging;
 using Ryujinx.Cpu;
 using Ryujinx.HLE.FileSystem;
+using Ryujinx.HLE.HOS.Applets;
 using Ryujinx.HLE.HOS.Kernel;
 using Ryujinx.HLE.HOS.Kernel.Memory;
 using Ryujinx.HLE.HOS.Kernel.Process;
@@ -61,7 +63,21 @@ namespace Ryujinx.HLE.HOS
 
         internal PerformanceState PerformanceState { get; private set; }
 
-        internal AppletStateMgr AppletState { get; private set; }
+        internal AppletStateMgr IntialAppletState { get; private set; }
+        
+        internal AppletStateMgr GetAppletState(ulong processId)
+        {
+            if (WindowSystem?.GetByAruId(processId) != null)
+            {
+                return WindowSystem.GetByAruId(processId).AppletState;
+            }
+
+            return IntialAppletState;
+        }
+        
+        public WindowSystem WindowSystem { get; private set; }
+
+        internal EventObserver EventObserver { get; private set; }
 
         internal List<NfpDevice> NfpDevices { get; private set; }
 
@@ -75,7 +91,7 @@ namespace Ryujinx.HLE.HOS
         internal ServerBase TimeServer { get; private set; }
         internal ServerBase ViServer { get; private set; }
         internal ServerBase ViServerM { get; private set; }
-        internal ServerBase ViServerS { get; private set; }
+        internal ViServer ViServerS { get; private set; }
         internal ServerBase LdnServer { get; private set; }
 
         internal KSharedMemory HidSharedMem { get; private set; }
@@ -90,6 +106,9 @@ namespace Ryujinx.HLE.HOS
         internal CaptureManager CaptureManager { get; private set; }
 
         internal KEvent VsyncEvent { get; private set; }
+        
+        internal KEvent GeneralChannelEvent { get; private set; }
+        internal Queue<byte[]> GeneralChannelData { get; private set; } = new();
 
         internal KEvent DisplayResolutionChangeEvent { get; private set; }
 
@@ -172,13 +191,13 @@ namespace Ryujinx.HLE.HOS
 
             AppletCaptureBufferTransfer = new KTransferMemory(KernelContext, appletCaptureBufferStorage);
 
-            AppletState = new AppletStateMgr(this);
-
-            AppletState.SetFocus(true);
+            WindowSystem = new WindowSystem(this);
+            EventObserver = new EventObserver(this, WindowSystem);
 
             VsyncEvent = new KEvent(KernelContext);
 
             DisplayResolutionChangeEvent = new KEvent(KernelContext);
+            GeneralChannelEvent = new KEvent(KernelContext);
 
             SharedFontManager = new SharedFontManager(device, fontStorage);
             AccountManager = device.Configuration.AccountManager;
@@ -254,7 +273,7 @@ namespace Ryujinx.HLE.HOS
             TimeServer = new ServerBase(KernelContext, "TimeServer");
             ViServer = new ServerBase(KernelContext, "ViServerU");
             ViServerM = new ServerBase(KernelContext, "ViServerM");
-            ViServerS = new ServerBase(KernelContext, "ViServerS");
+            ViServerS = new ViServer(KernelContext, "ViServerS");
             LdnServer = new ServerBase(KernelContext, "LdnServer");
 
             StartNewServices();
@@ -317,9 +336,7 @@ namespace Ryujinx.HLE.HOS
                 State.DockedMode = newState;
                 PerformanceState.PerformanceMode = State.DockedMode ? PerformanceMode.Boost : PerformanceMode.Default;
 
-                AppletState.Messages.Enqueue(AppletMessage.OperationModeChanged);
-                AppletState.Messages.Enqueue(AppletMessage.PerformanceModeChanged);
-                AppletState.MessageEvent.ReadableEvent.Signal();
+                WindowSystem.OnOperationModeChanged();
 
                 SignalDisplayResolutionChange();
 
@@ -329,13 +346,24 @@ namespace Ryujinx.HLE.HOS
 
         public void ReturnFocus()
         {
-            AppletState.SetFocus(true);
+            GetAppletState(WindowSystem.GetFocusedApp()).SetFocusState(FocusState.InFocus);
         }
 
         public void SimulateWakeUpMessage()
         {
-            AppletState.Messages.Enqueue(AppletMessage.Resume);
-            AppletState.MessageEvent.ReadableEvent.Signal();
+            PushToGeneralChannel(new byte[] {
+                0x53, 0x41, 0x4D, 0x53, 0x01, 0x00, 0x00, 0x00,
+                0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+            });
+        }
+
+        public void PushToGeneralChannel(byte[] data)
+        {
+            if (data.Length > 0)
+            {
+                GeneralChannelData.Enqueue(data);
+                GeneralChannelEvent.ReadableEvent.Signal();
+            }
         }
 
         public void ScanAmiibo(int nfpDeviceId, string amiiboId, bool useRandomUuid)
@@ -496,6 +524,22 @@ namespace Ryujinx.HLE.HOS
                 }
             }
             IsPaused = pause;
+        }
+        
+        public void SetupFirst(ulong ProgramId, ulong Pid)
+        {
+            bool isApp = ProgramId > 0x01000000000007FF;
+            ulong pid = 0;
+
+            if (WindowSystem.GetOverlayMenu() != null)
+            {
+                pid = WindowSystem.GetOverlayMenu().ProcessHandle.Pid;
+            }
+            RealApplet app = WindowSystem.TrackProcess(Pid, pid, isApp);
+            if (isApp)
+            {
+                app.AppletState.SetFocusForce(true);
+            }
         }
     }
 }
